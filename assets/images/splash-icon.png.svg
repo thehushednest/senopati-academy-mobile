@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="92.16" ry="92.16" fill="#18c29c"/>
+  <text x="50%" y="48%" font-family="Helvetica, Arial, sans-serif" font-weight="800"
+        font-size="281.6" fill="#ffffff" text-anchor="middle"
+        dominant-baseline="central" letter-spacing="-10.24">S</text>
+  <text x="50%" y="82%" font-family="Helvetica, Arial, sans-serif" font-weight="600"
+        font-size="40.96" fill="#ffffff" opacity="0.85" text-anchor="middle">
+    Senopati Academy
+  </text>
+</svg>

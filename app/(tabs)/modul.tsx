@@ -1,30 +1,51 @@
 import { useRouter } from "expo-router";
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { LAUNCH_MODULES } from "@/lib/api";
+import {
+  ActivityIndicator,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { useState } from "react";
+import { useModulList } from "@/lib/hooks";
 import { colors, font, radius, spacing, weight } from "@/lib/theme";
-
-const COMING_SOON_PREVIEW = [
-  { category: "Foundations", title: "How AI Works", level: "Pemula" },
-  { category: "Foundations", title: "History of AI", level: "Pemula" },
-  { category: "Praktis", title: "AI for Writing", level: "Menengah" },
-  { category: "Praktis", title: "AI for Research", level: "Menengah" },
-  { category: "Ethics & Safety", title: "Bias in AI", level: "Menengah" },
-  { category: "Advanced & Dev", title: "API Integration Basics", level: "Lanjutan" },
-];
 
 export default function ModulScreen() {
   const router = useRouter();
+  const { data: modules = [], isLoading, refetch } = useModulList();
+  const [refreshing, setRefreshing] = useState(false);
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await refetch();
+    setRefreshing(false);
+  };
+
+  const available = modules.filter((m) => !m.comingSoon);
+  const comingSoon = modules.filter((m) => m.comingSoon);
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: colors.bg }} contentContainerStyle={styles.container}>
+    <ScrollView
+      style={{ flex: 1, backgroundColor: colors.bg }}
+      contentContainerStyle={styles.container}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
+    >
       <View style={styles.header}>
         <Text style={styles.title}>Katalog Modul</Text>
-        <Text style={styles.subtitle}>4 modul siap dipelajari, lainnya segera hadir.</Text>
+        <Text style={styles.subtitle}>
+          {available.length} modul siap dipelajari{comingSoon.length > 0 ? `, ${comingSoon.length} segera hadir` : ""}.
+        </Text>
       </View>
+
+      {isLoading && modules.length === 0 ? (
+        <ActivityIndicator size="large" color={colors.brand} style={{ marginTop: 40 }} />
+      ) : null}
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Siap Dipelajari</Text>
-        {LAUNCH_MODULES.map((mod) => (
+        {available.map((mod) => (
           <TouchableOpacity
             key={mod.slug}
             style={styles.card}
@@ -32,7 +53,7 @@ export default function ModulScreen() {
             activeOpacity={0.75}
           >
             <View style={styles.cardHead}>
-              <Text style={styles.cardCategory}>{mod.categorySlug}</Text>
+              <Text style={styles.cardCategory}>{mod.category}</Text>
               <Text style={styles.cardLevel}>{mod.level}</Text>
             </View>
             <Text style={styles.cardTitle}>{mod.title}</Text>
@@ -40,23 +61,26 @@ export default function ModulScreen() {
               {mod.excerpt}
             </Text>
             <Text style={styles.cardMeta}>
-              {mod.duration} · {mod.topics} sesi
+              {mod.durationMinutes ? `${mod.durationMinutes} menit · ` : ""}
+              {mod.lessonCount} sesi
             </Text>
           </TouchableOpacity>
         ))}
       </View>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Segera Hadir</Text>
-        <Text style={styles.subtitle}>Tim editorial sedang menyiapkan konten modul lainnya.</Text>
-        {COMING_SOON_PREVIEW.map((mod, idx) => (
-          <View key={idx} style={styles.csCard}>
-            <Text style={styles.csCategory}>{mod.category}</Text>
-            <Text style={styles.csTitle}>{mod.title}</Text>
-            <Text style={styles.csLevel}>{mod.level}</Text>
-          </View>
-        ))}
-      </View>
+      {comingSoon.length > 0 ? (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Segera Hadir</Text>
+          <Text style={styles.subtitle}>Tim editorial sedang menyiapkan konten modul lainnya.</Text>
+          {comingSoon.map((mod) => (
+            <View key={mod.id} style={styles.csCard}>
+              <Text style={styles.csCategory}>{mod.category}</Text>
+              <Text style={styles.csTitle}>{mod.title}</Text>
+              <Text style={styles.csLevel}>{mod.level}</Text>
+            </View>
+          ))}
+        </View>
+      ) : null}
     </ScrollView>
   );
 }

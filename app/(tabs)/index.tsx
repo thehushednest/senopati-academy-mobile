@@ -1,12 +1,14 @@
 import { useRouter } from "expo-router";
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { LAUNCH_MODULES } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
+import { useModulList } from "@/lib/hooks";
 import { colors, font, radius, spacing, weight } from "@/lib/theme";
 
 export default function BerandaScreen() {
   const { user } = useAuth();
   const router = useRouter();
+  const { data: modules = [] } = useModulList();
+  const availableModules = modules.filter((m) => !m.comingSoon).slice(0, 4);
 
   const greeting = (() => {
     const hour = new Date().getHours();
@@ -32,7 +34,7 @@ export default function BerandaScreen() {
         <Text style={styles.sectionTitle}>Program Paham AI</Text>
         <Text style={styles.sectionSub}>4 modul gratis, siap langsung pelajari.</Text>
 
-        {LAUNCH_MODULES.map((mod, idx) => {
+        {availableModules.map((mod, idx) => {
           const accent = ["#18c29c", "#6366f1", "#f59e0b", "#ec4899"][idx % 4];
           return (
             <TouchableOpacity
@@ -41,15 +43,17 @@ export default function BerandaScreen() {
               onPress={() => router.push(`/modul/${mod.slug}`)}
               activeOpacity={0.75}
             >
-              <Text style={styles.cardEyebrow}>{mod.categorySlug.toUpperCase()}</Text>
+              <Text style={styles.cardEyebrow}>{mod.category.toUpperCase()}</Text>
               <Text style={styles.cardTitle}>{mod.title}</Text>
               <Text style={styles.cardDesc} numberOfLines={2}>
                 {mod.excerpt}
               </Text>
               <View style={styles.cardMeta}>
                 <Text style={styles.metaPill}>{mod.level}</Text>
-                <Text style={styles.metaText}>⏱ {mod.duration}</Text>
-                <Text style={styles.metaText}>{mod.topics} sesi</Text>
+                {mod.durationMinutes ? (
+                  <Text style={styles.metaText}>⏱ {mod.durationMinutes} menit</Text>
+                ) : null}
+                <Text style={styles.metaText}>{mod.lessonCount} sesi</Text>
               </View>
             </TouchableOpacity>
           );

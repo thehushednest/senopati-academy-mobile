@@ -1,5 +1,5 @@
 import { Link, useRouter } from "expo-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -13,15 +13,51 @@ import {
 } from "react-native";
 import { useAuth } from "@/lib/auth-context";
 import { ApiError } from "@/lib/api";
+import { biometricLabel, getBiometricCapability, tryBiometricUnlock } from "@/lib/biometric";
+import { sessionStore } from "@/lib/storage";
 import { colors, font, radius, spacing, weight } from "@/lib/theme";
 
 export default function LoginScreen() {
   const router = useRouter();
-  const { signIn } = useAuth();
+  const { signIn, refresh } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [bioLabel, setBioLabel] = useState<string | null>(null);
+  const [bioShadowReady, setBioShadowReady] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      const enabled = await sessionStore.isBiometricEnabled();
+      const shadow = await sessionStore.getBiometricShadowToken();
+      if (!enabled || !shadow) return;
+      const cap = await getBiometricCapability();
+      if (cap.available && cap.enrolled) {
+        setBioLabel(biometricLabel(cap.types));
+        setBioShadowReady(true);
+      }
+    })();
+  }, []);
+
+  const handleBiometric = async () => {
+    if (busy) return;
+    setError(null);
+    setBusy(true);
+    try {
+      const ok = await tryBiometricUnlock();
+      if (!ok) {
+        setError("Biometrik gagal. Coba password.");
+        return;
+      }
+      await refresh();
+      router.replace("/(tabs)");
+    } catch {
+      setError("Tidak bisa unlock. Coba password.");
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const handleSubmit = async () => {
     if (busy) return;
@@ -100,6 +136,12 @@ export default function LoginScreen() {
               <Text style={styles.buttonText}>Masuk</Text>
             )}
           </TouchableOpacity>
+
+          {bioShadowReady ? (
+            <TouchableOpacity style={styles.bioButton} onPress={handleBiometric} disabled={busy}>
+              <Text style={styles.bioButtonText}>🔒 Masuk dengan {bioLabel}</Text>
+            </TouchableOpacity>
+          ) : null}
 
           <Link href="/(auth)/reset-password" style={styles.linkSmall}>
             Lupa password?
@@ -222,6 +264,20 @@ const styles = StyleSheet.create({
   linkPrimary: {
     color: colors.brandStrong,
     fontSize: font.small,
+    fontWeight: weight.bold,
+  },
+  bioButton: {
+    backgroundColor: colors.brandSoft,
+    paddingVertical: spacing.md,
+    borderRadius: radius.md,
+    alignItems: "center",
+    marginTop: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.brand,
+  },
+  bioButtonText: {
+    color: colors.brandStrong,
+    fontSize: font.body,
     fontWeight: weight.bold,
   },
 });

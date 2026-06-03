@@ -2,45 +2,53 @@
 
 React Native + Expo client untuk Senopati Academy. Berbagi backend dengan web app di [https://senopatiacademy.id](https://senopatiacademy.id).
 
-**Versi:** 0.1.0 (Phase 1 — Foundation)
-**Status:** Development. Belum di-publish ke App Store / Play Store.
+**Versi:** 0.2.0 (Phase 2 — Feature-complete foundation)
+**Status:** Development. Belum di-publish ke App Store / Play Store (butuh user action: Apple Dev $99/yr + Play Console $25).
 
 ---
 
-## Yang Sudah Ada (Phase 1)
+## Yang Sudah Ada (Phase 1 + 2)
 
+### Phase 1 — Foundation
 | Area | Status |
 |---|---|
 | App scaffold (Expo 56 + Expo Router 56) | ✅ |
-| Branding (nama, splash, icon placeholder, color tokens) | ✅ |
-| Auth: Login | ✅ |
-| Auth: Signup dengan OTP 6-digit (verify via email) | ✅ |
-| Auth: Reset password dengan OTP | ✅ |
-| Secure storage token (Keychain iOS, EncryptedSharedPrefs Android) | ✅ |
-| Auth state context + bootstrap session di app start | ✅ |
+| Auth: Login + Signup OTP + Reset password OTP | ✅ |
+| Secure storage token (Keychain / EncryptedSharedPrefs) | ✅ |
 | Tab navigation: Beranda, Modul, Profil | ✅ |
-| Modul detail (via WebView reuse web app `/belajar/[slug]`) | ✅ |
 | Profile screen + logout | ✅ |
-| Not-found fallback | ✅ |
-| TypeScript strict, no error | ✅ |
+| TypeScript strict | ✅ |
 
-## Yang Belum (Phase 2 Roadmap)
+### Phase 2 — Native experience
+| Area | Status |
+|---|---|
+| Backend `/api/auth/mobile/login` JWT Bearer (30d TTL) | ✅ |
+| Backend `/api/auth/mobile/me` token validate | ✅ |
+| Backend `/api/mobile/modul` + `/[slug]` content endpoints | ✅ |
+| Mobile JWT auth (replace cookie hack) | ✅ |
+| TanStack Query + AsyncStorage persistence (offline cache 24h) | ✅ |
+| Native lesson player (markdown render via markdown-it) | ✅ |
+| Biometric quick unlock (Face ID / Touch ID / fingerprint) | ✅ |
+| Deep link `senopati://modul/<slug>` + universal link `https://senopatiacademy.id/modul/*` | ✅ |
+| Push notification scaffold (expo-notifications + tap handler) | ✅ |
+| EAS Build config (development / preview APK / production AAB+IPA) | ✅ |
+| Branding asset generator (`scripts/generate-icons.mjs`) | ✅ |
+| Branding placeholder asset (1024 icon, splash, favicon) | ✅ |
 
-- [ ] **Native lesson player** — render markdown/MDX modul tanpa WebView (saat ini pakai WebView)
+## Yang Belum (Phase 3 Roadmap)
+
 - [ ] **Live session join** — SSE listener via `event-source-polyfill`
-- [ ] **Push notification** — `expo-notifications` + Firebase/APNs setup
-- [ ] **Deep link** — `senopati://modul/<slug>` route handler + universal link
-- [ ] **Mobile-first API auth** — backend tambah `/api/auth/mobile/login` return JWT Bearer token (saat ini parse cookie Set-Cookie)
-- [ ] **Offline cache** — TanStack Query + AsyncStorage persistence untuk modul list
-- [ ] **Biometric auth** — `expo-local-authentication` untuk quick unlock
+- [ ] **Push notif backend** — `POST /api/notifications/register` simpan Expo Push Token
 - [ ] **Image upload** — `expo-image-picker` ke Lab Gambar AI
-- [ ] **Profile editor** — native form (saat ini link ke web)
+- [ ] **Profile editor native** — replace link ke web
 - [ ] **Cerita Jeda native** — port narrative engine ke RN
-- [ ] **Branding assets** — icon proper 1024×1024 + adaptive icon + splash screen art (saat ini default Expo)
-- [ ] **EAS Build setup** untuk App Store + Play Store binary
+- [ ] **Branding asset proper** — replace placeholder dengan asset dari designer
 - [ ] **Apple Developer account ($99/yr)** — pending registrasi
 - [ ] **Google Play Console ($25 one-time)** — pending registrasi
+- [ ] **EAS account login** + project linking
 - [ ] **App Store + Play Store listing** — screenshots, privacy URL, terms
+- [ ] **Apple App Site Association (AASA)** di web `/.well-known/apple-app-site-association` untuk universal link
+- [ ] **Android Asset Links** di web `/.well-known/assetlinks.json`
 
 ---
 
@@ -137,17 +145,33 @@ Kalau backend dev di `localhost:3003` (lewat tunnel atau Wi-Fi yang sama):
 
 ---
 
-## Build untuk Store (Phase 2)
+## Build untuk Store (Phase 3 — pending user action)
 
-### Persiapan
-1. Daftar Apple Developer account ($99/tahun) — proses verifikasi ~24-48 jam
-2. Daftar Google Play Console ($25 one-time)
-3. Setup [EAS](https://docs.expo.dev/eas/) — `npm install -g eas-cli && eas login`
+EAS config sudah tersedia di [`eas.json`](./eas.json). 3 profile:
+- `development` — dev client untuk Expo Dev Tools
+- `preview` — APK Android untuk internal testing
+- `production` — AAB Android + IPA iOS untuk store submission
 
-### Build commands (after setup)
+### Persiapan user action
+
+1. **Daftar Apple Developer account ($99/tahun)** — verifikasi 24-48 jam, pakai Apple ID + payment method internasional
+2. **Daftar Google Play Console ($25 one-time)** — instant approval
+3. **Daftar Expo account** + install CLI:
+   ```bash
+   npm install -g eas-cli
+   eas login
+   ```
+4. **Link project ke EAS**:
+   ```bash
+   eas init --id <project-id-dari-expo-dashboard>
+   ```
+5. **Replace placeholder di `eas.json`** dengan Apple ID + Team ID + ASC App ID
+6. **Replace branding asset** di `assets/images/` dengan asset dari designer (saat ini placeholder generated)
+
+### Build commands
 
 ```bash
-# Android APK untuk internal testing
+# Android APK untuk internal testing (install langsung di HP)
 eas build --platform android --profile preview
 
 # Android AAB untuk Play Store
@@ -155,18 +179,72 @@ eas build --platform android --profile production
 
 # iOS untuk TestFlight + App Store
 eas build --platform ios --profile production
+
+# Build keduanya sekaligus
+eas build --platform all --profile production
 ```
 
-### Submit
+### Submit ke store
 
 ```bash
-eas submit --platform android --latest
-eas submit --platform ios --latest
+eas submit --platform android --latest    # ke Play Store internal track
+eas submit --platform ios --latest        # ke TestFlight → App Store
 ```
 
-Review time:
-- Apple App Store: biasanya 1-3 hari kerja
-- Google Play: biasanya 1 hari (review otomatis + manual)
+### Review time
+- **Apple App Store:** 1-3 hari kerja (lebih lama kalau ada reject)
+- **Google Play:** 1 hari (review otomatis + manual)
+
+### Setelah submit
+1. Test via TestFlight (iOS) / Internal Testing (Android) dengan tim kecil dulu
+2. Promote ke open beta setelah stable
+3. Production release
+
+---
+
+## Universal Link Setup (Phase 3)
+
+Supaya `https://senopatiacademy.id/modul/<slug>` buka app langsung kalau install (bukan browser), butuh setup di sisi WEB:
+
+### iOS Apple App Site Association (AASA)
+
+Web app harus serve `https://senopatiacademy.id/.well-known/apple-app-site-association`:
+
+```json
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appID": "TEAM_ID.id.senopatiacademy.app",
+        "paths": ["/modul/*", "/profil"]
+      }
+    ]
+  }
+}
+```
+
+`TEAM_ID` dari Apple Developer Console. File harus served `Content-Type: application/json`, tanpa redirect.
+
+### Android Asset Links
+
+Web app harus serve `https://senopatiacademy.id/.well-known/assetlinks.json`:
+
+```json
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "id.senopatiacademy.app",
+    "sha256_cert_fingerprints": ["SHA256_FROM_KEYSTORE"]
+  }
+}]
+```
+
+SHA256 dapat dari EAS:
+```bash
+eas credentials --platform android
+```
 
 ---
 

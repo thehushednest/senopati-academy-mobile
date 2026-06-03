@@ -1,17 +1,12 @@
 /**
- * Auth context provider — share state user di-cabang seluruh app + bootstrap session
- * dari secure storage saat app start.
+ * Auth context provider — share state user di-cabang seluruh app + bootstrap
+ * session dari secure storage saat app start. Phase 2 — pakai JWT Bearer.
  */
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
-import { sessionStore } from "./storage";
-import { getSession, login as apiLogin, logout as apiLogout } from "./api";
+import { sessionStore, type StoredUser } from "./storage";
+import { getMe, login as apiLogin, logout as apiLogout } from "./api";
 
-export type AppUser = {
-  id: string;
-  email: string;
-  name?: string | null;
-  role: string;
-};
+export type AppUser = StoredUser;
 
 type AuthContextValue = {
   user: AppUser | null;
@@ -33,24 +28,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         const stored = await sessionStore.getUser();
         if (stored && !cancelled) setUser(stored);
-        // Verify dengan server — kalau token expired, hapus
+
         const token = await sessionStore.getToken();
-        if (token) {
-          const sess = await getSession();
-          if (cancelled) return;
-          if (sess?.user) {
-            const next: AppUser = {
-              id: sess.user.id ?? stored?.id ?? "",
-              email: sess.user.email ?? stored?.email ?? "",
-              name: sess.user.name ?? stored?.name ?? null,
-              role: sess.user.role ?? stored?.role ?? "student",
-            };
-            await sessionStore.setUser(next);
-            setUser(next);
-          } else {
-            await sessionStore.clear();
-            setUser(null);
-          }
+        if (!token) return;
+
+        // Refresh dari server — kalau token expired/revoked, clear.
+        const me = await getMe();
+        if (cancelled) return;
+        if (me) {
+          await sessionStore.setUser(me);
+          setUser(me);
+        } else {
+          await sessionStore.clear();
+          setUser(null);
         }
       } finally {
         if (!cancelled) setIsBootstrapping(false);
@@ -67,25 +57,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       user,
       isBootstrapping,
       async signIn(email, password) {
-        await apiLogin(email, password);
-        const stored = await sessionStore.getUser();
-        setUser(stored);
+        const u = await apiLogin(email, password);
+        setUser(u);
       },
       async signOut() {
         await apiLogout();
         setUser(null);
       },
       async refresh() {
-        const sess = await getSession();
-        if (sess?.user) {
-          const next: AppUser = {
-            id: sess.user.id ?? "",
-            email: sess.user.email ?? "",
-            name: sess.user.name ?? null,
-            role: sess.user.role ?? "student",
-          };
-          await sessionStore.setUser(next);
-          setUser(next);
+        const me = await getMe();
+        if (me) {
+          await sessionStore.setUser(me);
+          setUser(me);
         }
       },
     }),

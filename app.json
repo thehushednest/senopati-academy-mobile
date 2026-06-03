@@ -11,8 +11,10 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "id.senopatiacademy.app",
+      "associatedDomains": ["applinks:senopatiacademy.id"],
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSFaceIDUsageDescription": "Gunakan Face ID untuk masuk ke Senopati Academy dengan cepat dan aman."
       }
     },
     "android": {
@@ -23,7 +25,17 @@
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            { "scheme": "https", "host": "senopatiacademy.id", "pathPrefix": "/modul" }
+          ],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
+      ]
     },
     "web": {
       "bundler": "metro",
@@ -33,6 +45,14 @@
     "plugins": [
       "expo-router",
       "expo-secure-store",
+      "expo-local-authentication",
+      [
+        "expo-notifications",
+        {
+          "color": "#18c29c",
+          "defaultChannel": "default"
+        }
+      ],
       [
         "expo-splash-screen",
         {

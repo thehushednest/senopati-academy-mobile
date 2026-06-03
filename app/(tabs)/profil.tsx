@@ -1,11 +1,46 @@
 import { useRouter } from "expo-router";
-import { Alert, Linking, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { useEffect, useState } from "react";
+import {
+  Alert,
+  Linking,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { useAuth } from "@/lib/auth-context";
+import { biometricLabel, getBiometricCapability, promptBiometric } from "@/lib/biometric";
+import { sessionStore } from "@/lib/storage";
 import { colors, font, radius, spacing, weight } from "@/lib/theme";
 
 export default function ProfilScreen() {
   const { user, signOut } = useAuth();
   const router = useRouter();
+  const [bioCapable, setBioCapable] = useState(false);
+  const [bioLabel, setBioLabel] = useState("Biometrik");
+  const [bioEnabled, setBioEnabled] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      const cap = await getBiometricCapability();
+      if (cap.available && cap.enrolled) {
+        setBioCapable(true);
+        setBioLabel(biometricLabel(cap.types));
+      }
+      setBioEnabled(await sessionStore.isBiometricEnabled());
+    })();
+  }, []);
+
+  const toggleBiometric = async (next: boolean) => {
+    if (next) {
+      const ok = await promptBiometric("Aktifkan unlock biometrik");
+      if (!ok) return;
+    }
+    await sessionStore.setBiometricEnabled(next);
+    setBioEnabled(next);
+  };
 
   const handleSignOut = () => {
     Alert.alert("Keluar", "Yakin mau keluar dari akun?", [
@@ -53,6 +88,20 @@ export default function ProfilScreen() {
           hint="Via web — buka di browser"
           onPress={() => Linking.openURL("https://senopatiacademy.id/reset-password")}
         />
+        {bioCapable ? (
+          <View style={styles.row}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.rowLabel}>Unlock dengan {bioLabel}</Text>
+              <Text style={styles.rowHint}>Cepat masuk tanpa ketik password</Text>
+            </View>
+            <Switch
+              value={bioEnabled}
+              onValueChange={toggleBiometric}
+              trackColor={{ false: colors.line, true: colors.brand }}
+              thumbColor="#fff"
+            />
+          </View>
+        ) : null}
       </View>
 
       <View style={styles.section}>

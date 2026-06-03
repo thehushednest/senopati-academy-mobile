@@ -1,21 +1,14 @@
 /**
- * API client untuk Senopati Academy backend.
+ * API client untuk Senopati Academy backend — Phase 2 JWT Bearer.
  *
- * Auth strategy untuk Phase 1:
- * - NextAuth credentials provider di web pakai HTTP-only cookie `next-auth.session-token`
- * - Mobile fetch tidak ada cookie jar otomatis, jadi:
- *   1. Fetch /api/auth/csrf → simpan csrfToken
- *   2. POST /api/auth/callback/credentials dengan email + password + csrfToken
- *   3. Parse Set-Cookie response untuk ambil session-token
- *   4. Simpan ke SecureStore
- *   5. Tiap request berikutnya: inject Cookie header
- *
- * Phase 2 roadmap: backend tambah /api/auth/mobile/login endpoint yang return
- *   { token: JWT, expiresAt } sehingga mobile bisa pakai Authorization: Bearer
- *   tanpa workaround cookie parsing.
+ * Auth flow:
+ * 1. POST /api/auth/mobile/login { email, password } → { token, expiresAt, user }
+ * 2. Simpan token + user di SecureStore
+ * 3. Tiap request: Authorization: Bearer <token>
+ * 4. Tiap startup: GET /api/auth/mobile/me untuk validate token
  */
 import Constants from "expo-constants";
-import { sessionStore } from "./storage";
+import { sessionStore, type StoredUser } from "./storage";
 
 const BASE = (Constants.expoConfig?.extra as { apiBaseUrl?: string })?.apiBaseUrl ??
   "https://senopatiacademy.id";
@@ -35,14 +28,14 @@ type FetchOptions = RequestInit & { skipAuth?: boolean };
 async function buildHeaders(opts: FetchOptions): Promise<HeadersInit> {
   const headers: Record<string, string> = {
     Accept: "application/json",
-    "User-Agent": "SenopatiAcademyMobile/0.1.0",
+    "User-Agent": "SenopatiAcademyMobile/0.2.0",
   };
   if (opts.body && !(opts.body instanceof FormData)) {
     headers["Content-Type"] = "application/json";
   }
   if (!opts.skipAuth) {
     const token = await sessionStore.getToken();
-    if (token) headers["Cookie"] = `__Secure-next-auth.session-token=${token}`;
+    if (token) headers["Authorization"] = `Bearer ${token}`;
   }
   return { ...headers, ...(opts.headers as Record<string, string> | undefined) };
 }
@@ -51,18 +44,7 @@ export async function api<T = unknown>(path: string, opts: FetchOptions = {}): P
   const url = path.startsWith("http") ? path : `${BASE}${path}`;
   const headers = await buildHeaders(opts);
 
-  const res = await fetch(url, {
-    ...opts,
-    headers,
-    credentials: "include",
-  });
-
-  // Set-Cookie parsing — NextAuth set token via cookie. Kalau ada session cookie baru, simpan.
-  const setCookie = res.headers.get("set-cookie");
-  if (setCookie) {
-    const match = setCookie.match(/__Secure-next-auth\.session-token=([^;]+)/);
-    if (match) await sessionStore.setToken(match[1]);
-  }
+  const res = await fetch(url, { ...opts, headers });
 
   const ct = res.headers.get("content-type") || "";
   const isJson = ct.includes("application/json");
@@ -81,79 +63,37 @@ export async function api<T = unknown>(path: string, opts: FetchOptions = {}): P
 
 // ─── Auth ──────────────────────────────────────────────────────────
 
-type CsrfResponse = { csrfToken: string };
+type LoginResponse = {
+  token: string;
+  expiresAt: string;
+  user: StoredUser;
+};
 
-export async function fetchCsrf(): Promise<string> {
-  const res = await api<CsrfResponse>("/api/auth/csrf", { skipAuth: true });
-  await sessionStore.setCsrf(res.csrfToken);
-  return res.csrfToken;
+export async function login(email: string, password: string): Promise<StoredUser> {
+  const res = await api<LoginResponse>("/api/auth/mobile/login", {
+    method: "POST",
+    body: JSON.stringify({ email, password }),
+    skipAuth: true,
+  });
+  await sessionStore.setToken(res.token, res.expiresAt);
+  await sessionStore.setUser(res.user);
+  return res.user;
 }
 
-export async function login(email: string, password: string): Promise<void> {
-  const csrf = await fetchCsrf();
-  const body = new URLSearchParams({
-    csrfToken: csrf,
-    email,
-    password,
-    callbackUrl: `${BASE}/dashboard`,
-    json: "true",
-  }).toString();
-
-  const url = `${BASE}/api/auth/callback/credentials`;
-  const res = await fetch(url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded",
-      Accept: "application/json",
-      Cookie: `__Host-next-auth.csrf-token=${encodeURIComponent(csrf)}|hash`,
-    },
-    body,
-    redirect: "manual",
-  });
-
-  const setCookie = res.headers.get("set-cookie") ?? "";
-  const sessMatch = setCookie.match(/__Secure-next-auth\.session-token=([^;]+)/);
-  if (!sessMatch) {
-    throw new ApiError(401, "Email atau password salah");
-  }
-  await sessionStore.setToken(sessMatch[1]);
-
-  // Fetch session profile
-  const profile = await getSession();
-  if (profile?.user) {
-    await sessionStore.setUser({
-      id: profile.user.id ?? "",
-      email: profile.user.email ?? email,
-      name: profile.user.name,
-      role: profile.user.role ?? "student",
-    });
+export async function getMe(): Promise<StoredUser | null> {
+  try {
+    const res = await api<{ user: StoredUser }>("/api/auth/mobile/me");
+    return res.user;
+  } catch {
+    return null;
   }
 }
 
 export async function logout(): Promise<void> {
-  try {
-    const csrf = await sessionStore.getCsrf();
-    if (csrf) {
-      await api("/api/auth/signout", {
-        method: "POST",
-        body: JSON.stringify({ csrfToken: csrf, callbackUrl: "/" }),
-      }).catch(() => null);
-    }
-  } finally {
-    await sessionStore.clear();
-  }
+  await sessionStore.clear();
 }
 
-type Session = {
-  user?: { id?: string; email?: string; name?: string | null; role?: string };
-  expires?: string;
-} | null;
-
-export async function getSession(): Promise<Session> {
-  return api<Session>("/api/auth/session").catch(() => null);
-}
-
-// ─── OTP signup ────────────────────────────────────────────────────
+// ─── OTP signup (re-use existing endpoint, return JSON) ───────────
 
 export async function requestOtp(email: string, purpose: "signup_verify" | "password_reset") {
   return api<{ ok: boolean; expiresAt: string }>("/api/auth/otp/request", {
@@ -184,65 +124,103 @@ export async function resetPassword(params: { email: string; password: string; o
   });
 }
 
-// ─── Content ───────────────────────────────────────────────────────
+// ─── Modul (Phase 2: API-backed) ──────────────────────────────────
 
-export type Module = {
+export type ModulListItem = {
+  id: string;
   slug: string;
   title: string;
-  categorySlug: string;
-  level: "Pemula" | "Menengah" | "Lanjutan";
-  duration: string;
-  topics: number;
   excerpt: string;
-  mentorSlug: string;
+  category: string;
+  level: string;
+  coverImageUrl: string | null;
+  durationMinutes: number | null;
+  lessonCount: number;
+  comingSoon: boolean;
 };
 
-// Daftar modul Paham AI yang siap publik — di-hardcode supaya bisa offline-first
-// dan tidak butuh endpoint khusus mobile. Phase 2: switch ke /api/modul.
-export const LAUNCH_MODULES: Module[] = [
+export type ModulDetail = {
+  id: string;
+  slug: string;
+  title: string;
+  description: string;
+  category: string;
+  level: string;
+  coverImageUrl: string | null;
+  durationMinutes: number | null;
+  format: string;
+  objectivesJson: unknown;
+  highlightsJson: unknown;
+  previewBody: string | null;
+  tutor: { id: string; name: string; avatarUrl: string | null };
+  lessons: Array<{
+    id: string;
+    title: string;
+    orderIndex: number;
+    durationMinutes: number | null;
+    notes: string | null;
+    videoProvider: string | null;
+    videoUrl: string | null;
+  }>;
+};
+
+export async function fetchModulList() {
+  return api<{ items: ModulListItem[] }>("/api/mobile/modul");
+}
+
+export async function fetchModul(slug: string) {
+  return api<{ course: ModulDetail }>(`/api/mobile/modul/${slug}`);
+}
+
+// Fallback hard-coded (kalau API gagal, e.g. offline saat first run)
+export const LAUNCH_MODULES: ModulListItem[] = [
   {
+    id: "fallback-01",
     slug: "modul-01-introduction-to-ai",
     title: "Modul 01 — Introduction to AI",
-    categorySlug: "foundations",
+    excerpt: "Pahami dasar AI dengan bahasa yang dekat dengan kehidupan siswa.",
+    category: "foundations",
     level: "Pemula",
-    duration: "90 menit",
-    topics: 6,
-    excerpt:
-      "Pahami dasar AI dengan bahasa yang dekat dengan kehidupan siswa — bukan jargon.",
-    mentorSlug: "arya-pratama",
+    coverImageUrl: null,
+    durationMinutes: 90,
+    lessonCount: 6,
+    comingSoon: false,
   },
   {
+    id: "fallback-02",
     slug: "modul-02-ethical-use-of-ai",
     title: "Modul 02 — Ethical Use of AI",
-    categorySlug: "ethics-safety",
+    excerpt: "Pakai AI dengan etis, aman, dan bertanggung jawab.",
+    category: "ethics-safety",
     level: "Pemula",
-    duration: "90 menit",
-    topics: 6,
-    excerpt:
-      "Pakai AI dengan etis, aman, dan bertanggung jawab — di sekolah maupun sehari-hari.",
-    mentorSlug: "maya-hendrawan",
+    coverImageUrl: null,
+    durationMinutes: 90,
+    lessonCount: 6,
+    comingSoon: false,
   },
   {
+    id: "fallback-11",
     slug: "modul-11-fighting-hoax-with-ai",
     title: "Modul 11 — Fighting Hoax with AI",
-    categorySlug: "ethics-safety",
+    excerpt: "Pakai AI dan nalar kritis — jangan sampai tertipu hoaks deepfake.",
+    category: "ethics-safety",
     level: "Pemula",
-    duration: "90 menit",
-    topics: 7,
-    excerpt:
-      "Pakai AI dan nalar kritis — jangan sampai tertipu hoaks generasi deepfake.",
-    mentorSlug: "maya-hendrawan",
+    coverImageUrl: null,
+    durationMinutes: 90,
+    lessonCount: 7,
+    comingSoon: false,
   },
   {
+    id: "fallback-22",
     slug: "modul-22-ai-prompt-101",
     title: "Modul 22 — AI Prompts 101",
-    categorySlug: "praktis",
+    excerpt: "Cara dapat hasil 5x lebih baik dari AI.",
+    category: "praktis",
     level: "Pemula",
-    duration: "90 menit",
-    topics: 7,
-    excerpt:
-      "Cara dapat hasil 5x lebih baik dari AI — bukan cuma pemakai, jadi prompt engineer.",
-    mentorSlug: "reza-adityawan",
+    coverImageUrl: null,
+    durationMinutes: 90,
+    lessonCount: 7,
+    comingSoon: false,
   },
 ];
 

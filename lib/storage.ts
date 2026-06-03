@@ -1,13 +1,18 @@
 /**
- * Token + session storage via expo-secure-store (Keychain di iOS, EncryptedSharedPreferences di Android).
- * Untuk dev di web, fallback ke localStorage supaya bisa test di Expo web.
+ * Token + session storage via expo-secure-store (Keychain di iOS,
+ * EncryptedSharedPreferences di Android). Web fallback ke localStorage.
+ *
+ * Phase 2 — switch dari NextAuth cookie ke JWT Bearer token (issued by
+ * /api/auth/mobile/login). Simpler, no Set-Cookie parsing.
  */
 import * as SecureStore from "expo-secure-store";
 import { Platform } from "react-native";
 
-const KEY_SESSION = "senopati.session_token";
-const KEY_CSRF = "senopati.csrf_token";
+const KEY_TOKEN = "senopati.jwt";
+const KEY_TOKEN_EXP = "senopati.jwt_exp";
 const KEY_USER = "senopati.user";
+const KEY_BIOMETRIC_ENABLED = "senopati.biometric_enabled";
+const KEY_BIOMETRIC_TOKEN_SHADOW = "senopati.biometric_shadow"; // copy untuk quick-unlock
 
 async function set(key: string, value: string | null) {
   if (Platform.OS === "web") {
@@ -26,32 +31,70 @@ async function get(key: string): Promise<string | null> {
   return SecureStore.getItemAsync(key);
 }
 
+export type StoredUser = {
+  id: string;
+  email: string;
+  name?: string | null;
+  role: string;
+  avatarUrl?: string | null;
+};
+
 export const sessionStore = {
   async getToken() {
-    return get(KEY_SESSION);
+    return get(KEY_TOKEN);
   },
-  async setToken(t: string | null) {
-    return set(KEY_SESSION, t);
+  async setToken(token: string | null, expiresAt?: string | null) {
+    await set(KEY_TOKEN, token);
+    await set(KEY_TOKEN_EXP, expiresAt ?? null);
   },
-  async getCsrf() {
-    return get(KEY_CSRF);
+  async getTokenExp(): Promise<Date | null> {
+    const raw = await get(KEY_TOKEN_EXP);
+    if (!raw) return null;
+    const d = new Date(raw);
+    return Number.isNaN(d.getTime()) ? null : d;
   },
-  async setCsrf(t: string | null) {
-    return set(KEY_CSRF, t);
+  async isTokenExpired(): Promise<boolean> {
+    const exp = await this.getTokenExp();
+    if (!exp) return false;
+    // 5 min buffer
+    return exp.getTime() - Date.now() < 5 * 60 * 1000;
   },
-  async getUser() {
+  async getUser(): Promise<StoredUser | null> {
     const raw = await get(KEY_USER);
     if (!raw) return null;
     try {
-      return JSON.parse(raw) as { id: string; email: string; name?: string | null; role: string };
+      return JSON.parse(raw) as StoredUser;
     } catch {
       return null;
     }
   },
-  async setUser(u: { id: string; email: string; name?: string | null; role: string } | null) {
+  async setUser(u: StoredUser | null) {
     return set(KEY_USER, u ? JSON.stringify(u) : null);
   },
   async clear() {
-    await Promise.all([set(KEY_SESSION, null), set(KEY_CSRF, null), set(KEY_USER, null)]);
+    await Promise.all([
+      set(KEY_TOKEN, null),
+      set(KEY_TOKEN_EXP, null),
+      set(KEY_USER, null),
+      set(KEY_BIOMETRIC_TOKEN_SHADOW, null),
+    ]);
+    // keep KEY_BIOMETRIC_ENABLED supaya preferensi user tetap
+  },
+  // ─── Biometric quick unlock ─────────────────────────────────────
+  async isBiometricEnabled(): Promise<boolean> {
+    return (await get(KEY_BIOMETRIC_ENABLED)) === "1";
+  },
+  async setBiometricEnabled(enabled: boolean) {
+    if (enabled) {
+      const t = await get(KEY_TOKEN);
+      if (t) await set(KEY_BIOMETRIC_TOKEN_SHADOW, t);
+      await set(KEY_BIOMETRIC_ENABLED, "1");
+    } else {
+      await set(KEY_BIOMETRIC_ENABLED, null);
+      await set(KEY_BIOMETRIC_TOKEN_SHADOW, null);
+    }
+  },
+  async getBiometricShadowToken(): Promise<string | null> {
+    return get(KEY_BIOMETRIC_TOKEN_SHADOW);
   },
 };
