@@ -10,7 +10,12 @@ import {
 } from "react-native";
 import { useState } from "react";
 import { useModulList } from "@/lib/hooks";
-import { colors, font, radius, spacing, weight } from "@/lib/theme";
+import { colors, font, kickerStyle, spacing, weight } from "@/lib/theme";
+
+/**
+ * Katalog modul — editorial divider list. Drop card+border pattern,
+ * numbered list dengan kicker + meta inline.
+ */
 
 export default function ModulScreen() {
   const router = useRouter();
@@ -32,51 +37,85 @@ export default function ModulScreen() {
       contentContainerStyle={styles.container}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
     >
-      <View style={styles.header}>
-        <Text style={styles.title}>Katalog Modul</Text>
-        <Text style={styles.subtitle}>
-          {available.length} modul siap dipelajari{comingSoon.length > 0 ? `, ${comingSoon.length} segera hadir` : ""}.
+      {/* ── Masthead ─────────────────────────────────── */}
+      <View style={styles.masthead}>
+        <Text style={styles.kicker}>Katalog</Text>
+        <Text style={styles.title}>Modul AI siap dipelajari.</Text>
+        <Text style={styles.lede}>
+          {available.length} modul{comingSoon.length > 0 ? ` aktif, ${comingSoon.length} segera hadir` : ""}.
+          Pilih yang paling dekat dengan kebutuhanmu — gak harus urut.
         </Text>
       </View>
 
       {isLoading && modules.length === 0 ? (
-        <ActivityIndicator size="large" color={colors.brand} style={{ marginTop: 40 }} />
+        <ActivityIndicator size="small" color={colors.brand} style={{ marginTop: 40 }} />
       ) : null}
 
+      {/* ── Available list ────────────────────────────── */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Siap Dipelajari</Text>
-        {available.map((mod) => (
-          <TouchableOpacity
-            key={mod.slug}
-            style={styles.card}
-            onPress={() => router.push(`/modul/${mod.slug}`)}
-            activeOpacity={0.75}
-          >
-            <View style={styles.cardHead}>
-              <Text style={styles.cardCategory}>{mod.category}</Text>
-              <Text style={styles.cardLevel}>{mod.level}</Text>
-            </View>
-            <Text style={styles.cardTitle}>{mod.title}</Text>
-            <Text style={styles.cardDesc} numberOfLines={2}>
-              {mod.excerpt}
-            </Text>
-            <Text style={styles.cardMeta}>
-              {mod.durationMinutes ? `${mod.durationMinutes} menit · ` : ""}
-              {mod.lessonCount} sesi
-            </Text>
-          </TouchableOpacity>
-        ))}
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionKicker}>Siap dipelajari</Text>
+          <Text style={styles.sectionCount}>{available.length}</Text>
+        </View>
+
+        <View>
+          {available.map((mod, idx) => (
+            <TouchableOpacity
+              key={mod.slug}
+              style={[styles.row, idx === available.length - 1 && styles.rowLast]}
+              onPress={() => router.push(`/modul/${mod.slug}`)}
+              activeOpacity={0.6}
+            >
+              <Text style={styles.rowNum}>{String(idx + 1).padStart(2, "0")}</Text>
+              <View style={styles.rowBody}>
+                <Text style={styles.rowCategory}>
+                  {mod.category.toUpperCase()}
+                </Text>
+                <Text style={styles.rowTitle} numberOfLines={2}>
+                  {mod.title}
+                </Text>
+                <Text style={styles.rowDesc} numberOfLines={2}>
+                  {mod.excerpt}
+                </Text>
+                <View style={styles.rowMeta}>
+                  <Text style={styles.metaText}>{mod.level}</Text>
+                  <Text style={styles.metaSep}>·</Text>
+                  {mod.durationMinutes ? (
+                    <>
+                      <Text style={styles.metaText}>{mod.durationMinutes} menit</Text>
+                      <Text style={styles.metaSep}>·</Text>
+                    </>
+                  ) : null}
+                  <Text style={styles.metaText}>{mod.lessonCount} sesi</Text>
+                </View>
+              </View>
+            </TouchableOpacity>
+          ))}
+        </View>
       </View>
 
+      {/* ── Coming soon ────────────────────────────────── */}
       {comingSoon.length > 0 ? (
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Segera Hadir</Text>
-          <Text style={styles.subtitle}>Tim editorial sedang menyiapkan konten modul lainnya.</Text>
-          {comingSoon.map((mod) => (
-            <View key={mod.id} style={styles.csCard}>
-              <Text style={styles.csCategory}>{mod.category}</Text>
-              <Text style={styles.csTitle}>{mod.title}</Text>
-              <Text style={styles.csLevel}>{mod.level}</Text>
+          <View style={styles.sectionHeader}>
+            <Text style={[styles.sectionKicker, { color: colors.accent }]}>Segera hadir</Text>
+            <Text style={styles.sectionCount}>{comingSoon.length}</Text>
+          </View>
+          {comingSoon.map((mod, idx) => (
+            <View
+              key={mod.id}
+              style={[styles.row, styles.rowCs, idx === comingSoon.length - 1 && styles.rowLast]}
+            >
+              <Text style={[styles.rowNum, { color: colors.mutedSoft }]}>
+                {String(idx + available.length + 1).padStart(2, "0")}
+              </Text>
+              <View style={styles.rowBody}>
+                <Text style={styles.rowCategory}>{mod.category.toUpperCase()}</Text>
+                <Text style={[styles.rowTitle, { color: colors.body }]} numberOfLines={2}>
+                  {mod.title}
+                </Text>
+                <Text style={styles.metaText}>{mod.level}</Text>
+              </View>
             </View>
           ))}
         </View>
@@ -86,36 +125,108 @@ export default function ModulScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { padding: spacing.lg, paddingBottom: spacing["2xl"] },
-  header: { marginBottom: spacing.lg },
-  title: { fontSize: font.h1, fontWeight: weight.extrabold, color: colors.ink, letterSpacing: -0.5 },
-  subtitle: { fontSize: font.small, color: colors.muted, marginTop: spacing.xs },
-  section: { marginBottom: spacing.xl },
-  sectionTitle: { fontSize: font.h2, fontWeight: weight.bold, color: colors.ink, marginBottom: spacing.md },
-  card: {
-    backgroundColor: colors.panel,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
-    marginBottom: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.line,
+  container: {
+    padding: spacing.xl,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing["3xl"],
   },
-  cardHead: { flexDirection: "row", justifyContent: "space-between", marginBottom: spacing.xs },
-  cardCategory: { fontSize: 10, color: colors.brandStrong, fontWeight: weight.bold, letterSpacing: 1, textTransform: "uppercase" },
-  cardLevel: { fontSize: 10, color: colors.muted, fontWeight: weight.semibold, letterSpacing: 0.5 },
-  cardTitle: { fontSize: font.h3, fontWeight: weight.bold, color: colors.ink, marginBottom: spacing.xs },
-  cardDesc: { fontSize: font.small, color: colors.muted, lineHeight: 20, marginBottom: spacing.sm },
-  cardMeta: { fontSize: font.small, color: colors.muted, fontWeight: weight.semibold },
-  csCard: {
-    backgroundColor: "rgba(15, 23, 42, 0.03)",
-    borderRadius: radius.md,
-    padding: spacing.md,
+
+  masthead: {
+    paddingBottom: spacing.xl,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.line,
+    marginBottom: spacing.xl,
+  },
+  kicker: {
+    ...kickerStyle,
     marginBottom: spacing.sm,
-    borderWidth: 1,
-    borderColor: colors.line,
-    borderStyle: "dashed",
   },
-  csCategory: { fontSize: 10, color: colors.muted, fontWeight: weight.bold, letterSpacing: 1, textTransform: "uppercase" },
-  csTitle: { fontSize: font.body, fontWeight: weight.semibold, color: colors.inkSoft, marginTop: 2 },
-  csLevel: { fontSize: font.small, color: colors.mutedSoft, marginTop: 2 },
+  title: {
+    fontSize: font.hero,
+    fontWeight: weight.semibold,
+    color: colors.ink,
+    letterSpacing: -0.7,
+    lineHeight: font.hero * 1.1,
+  },
+  lede: {
+    fontSize: font.body,
+    color: colors.body,
+    marginTop: spacing.md,
+    lineHeight: 22,
+  },
+
+  section: {
+    marginBottom: spacing.xl,
+  },
+  sectionHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "baseline",
+    paddingBottom: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.line,
+  },
+  sectionKicker: { ...kickerStyle },
+  sectionCount: {
+    fontSize: font.tiny,
+    color: colors.muted,
+    fontVariant: ["tabular-nums"],
+  },
+
+  row: {
+    flexDirection: "row",
+    paddingVertical: spacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.line,
+    gap: spacing.lg,
+  },
+  rowLast: { borderBottomWidth: 0 },
+  rowCs: { opacity: 0.7 },
+
+  rowNum: {
+    fontSize: 22,
+    fontWeight: weight.semibold,
+    color: colors.mutedSoft,
+    fontVariant: ["tabular-nums"],
+    width: 32,
+    lineHeight: 26,
+  },
+  rowBody: { flex: 1 },
+
+  rowCategory: {
+    fontSize: font.micro,
+    color: colors.brand,
+    fontWeight: weight.semibold,
+    letterSpacing: 1.5,
+    marginBottom: 4,
+  },
+  rowTitle: {
+    fontSize: font.h3,
+    fontWeight: weight.semibold,
+    color: colors.ink,
+    letterSpacing: -0.2,
+    marginBottom: 4,
+    lineHeight: 20,
+  },
+  rowDesc: {
+    fontSize: font.small,
+    color: colors.body,
+    lineHeight: 19,
+    marginBottom: spacing.sm,
+  },
+  rowMeta: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    flexWrap: "wrap",
+  },
+  metaText: {
+    fontSize: font.tiny,
+    color: colors.muted,
+    fontWeight: weight.medium,
+  },
+  metaSep: {
+    fontSize: font.tiny,
+    color: colors.lineStrong,
+  },
 });

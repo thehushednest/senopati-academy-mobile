@@ -178,7 +178,7 @@ export function Markdown({ source }: { source: string }) {
 
 const styles = StyleSheet.create({
   container: { gap: spacing.sm },
-  h1: { fontSize: 24, fontWeight: weight.extrabold, color: colors.ink, marginTop: spacing.lg, marginBottom: spacing.xs, letterSpacing: -0.5 },
+  h1: { fontSize: 24, fontWeight: weight.semibold, color: colors.ink, marginTop: spacing.lg, marginBottom: spacing.xs, letterSpacing: -0.5 },
   h2: { fontSize: 20, fontWeight: weight.bold, color: colors.ink, marginTop: spacing.md, marginBottom: spacing.xs },
   h3: { fontSize: font.h3, fontWeight: weight.bold, color: colors.ink, marginTop: spacing.md, marginBottom: spacing.xs },
   p: { fontSize: font.body, lineHeight: 24, color: colors.inkSoft },

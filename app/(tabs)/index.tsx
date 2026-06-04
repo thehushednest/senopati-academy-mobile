@@ -2,7 +2,13 @@ import { useRouter } from "expo-router";
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useAuth } from "@/lib/auth-context";
 import { useModulList } from "@/lib/hooks";
-import { colors, font, radius, spacing, weight } from "@/lib/theme";
+import { colors, font, kickerStyle, radius, spacing, weight } from "@/lib/theme";
+
+/**
+ * Beranda — editorial mobile layout. Drop hero card + rainbow accent borders
+ * yang bikin "AI generic". Ganti ke editorial pattern: kicker + serif title
+ * + flat list dengan hairline divider.
+ */
 
 export default function BerandaScreen() {
   const { user } = useAuth();
@@ -18,53 +24,70 @@ export default function BerandaScreen() {
     return "Selamat malam";
   })();
 
+  const firstName = (user?.name || "Pelajar").split(" ")[0];
+
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: colors.bg }} contentContainerStyle={styles.container}>
-      <View style={styles.hero}>
-        <Text style={styles.eyebrow}>{greeting},</Text>
-        <Text style={styles.heroTitle}>
-          {user?.name || "Pelajar"} 👋
-        </Text>
-        <Text style={styles.heroDesc}>
-          Belum mulai modul apa pun? Yuk pilih satu dari Paham AI di bawah.
+    <ScrollView
+      style={{ flex: 1, backgroundColor: colors.bg }}
+      contentContainerStyle={styles.container}
+    >
+      {/* ── Masthead ─────────────────────────────────────── */}
+      <View style={styles.masthead}>
+        <Text style={styles.kicker}>{greeting.toUpperCase()}</Text>
+        <Text style={styles.heroTitle}>Halo, {firstName}.</Text>
+        <Text style={styles.heroLede}>
+          Belum mulai modul apa pun? Pilih satu dari Paham AI di bawah.
         </Text>
       </View>
 
+      {/* ── Modul section ────────────────────────────────── */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Program Paham AI</Text>
-        <Text style={styles.sectionSub}>4 modul gratis, siap langsung pelajari.</Text>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionKicker}>Program Paham AI</Text>
+          <Text style={styles.sectionCount}>{availableModules.length} modul</Text>
+        </View>
 
-        {availableModules.map((mod, idx) => {
-          const accent = ["#18c29c", "#6366f1", "#f59e0b", "#ec4899"][idx % 4];
-          return (
+        <View style={styles.list}>
+          {availableModules.map((mod, idx) => (
             <TouchableOpacity
               key={mod.slug}
-              style={[styles.card, { borderLeftColor: accent }]}
+              style={[styles.row, idx === availableModules.length - 1 && styles.rowLast]}
               onPress={() => router.push(`/modul/${mod.slug}`)}
-              activeOpacity={0.75}
+              activeOpacity={0.6}
             >
-              <Text style={styles.cardEyebrow}>{mod.category.toUpperCase()}</Text>
-              <Text style={styles.cardTitle}>{mod.title}</Text>
-              <Text style={styles.cardDesc} numberOfLines={2}>
-                {mod.excerpt}
+              <Text style={styles.rowNum}>
+                {String(idx + 1).padStart(2, "0")}
               </Text>
-              <View style={styles.cardMeta}>
-                <Text style={styles.metaPill}>{mod.level}</Text>
-                {mod.durationMinutes ? (
-                  <Text style={styles.metaText}>⏱ {mod.durationMinutes} menit</Text>
-                ) : null}
-                <Text style={styles.metaText}>{mod.lessonCount} sesi</Text>
+              <View style={styles.rowBody}>
+                <Text style={styles.rowTitle} numberOfLines={2}>
+                  {mod.title}
+                </Text>
+                <Text style={styles.rowDesc} numberOfLines={2}>
+                  {mod.excerpt}
+                </Text>
+                <View style={styles.rowMeta}>
+                  <Text style={styles.metaText}>{mod.level}</Text>
+                  <Text style={styles.metaSep}>·</Text>
+                  {mod.durationMinutes ? (
+                    <>
+                      <Text style={styles.metaText}>{mod.durationMinutes} menit</Text>
+                      <Text style={styles.metaSep}>·</Text>
+                    </>
+                  ) : null}
+                  <Text style={styles.metaText}>{mod.lessonCount} sesi</Text>
+                </View>
               </View>
             </TouchableOpacity>
-          );
-        })}
+          ))}
+        </View>
       </View>
 
+      {/* ── Tip — sidenote style, tidak ber-warna ─────────── */}
       <View style={styles.tip}>
-        <Text style={styles.tipTitle}>💡 Tip belajar</Text>
+        <Text style={styles.tipKicker}>Catatan</Text>
         <Text style={styles.tipText}>
-          Belajar 30 menit per hari lebih efektif dari pada 3 jam sekali. Konsisten dulu, intensitas
-          nanti.
+          Belajar 30 menit per hari lebih efektif dari 3 jam sekali. Konsisten
+          dulu, intensitas nanti.
         </Text>
       </View>
     </ScrollView>
@@ -72,63 +95,127 @@ export default function BerandaScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { padding: spacing.lg, paddingBottom: spacing["2xl"] },
-  hero: {
-    backgroundColor: colors.panel,
-    borderRadius: radius.xl,
+  container: {
     padding: spacing.xl,
-    marginBottom: spacing.lg,
-    shadowColor: "#000",
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 1,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing["3xl"],
   },
-  eyebrow: { fontSize: font.small, color: colors.muted, fontWeight: weight.semibold },
+
+  // ── Masthead ────────────────────────────────────────
+  masthead: {
+    paddingBottom: spacing.xl,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.line,
+    marginBottom: spacing.xl,
+  },
+  kicker: {
+    ...kickerStyle,
+    marginBottom: spacing.sm,
+  },
   heroTitle: {
-    fontSize: font.h1,
-    fontWeight: weight.extrabold,
+    fontSize: font.hero,
+    fontWeight: weight.semibold,
     color: colors.ink,
-    marginTop: spacing.xs,
-    letterSpacing: -0.5,
+    letterSpacing: -0.7,
+    lineHeight: font.hero * 1.1,
   },
-  heroDesc: { fontSize: font.small, color: colors.muted, marginTop: spacing.sm, lineHeight: 20 },
-  section: { marginBottom: spacing.lg },
-  sectionTitle: { fontSize: font.h2, fontWeight: weight.bold, color: colors.ink, marginBottom: spacing.xs },
-  sectionSub: { fontSize: font.small, color: colors.muted, marginBottom: spacing.md },
-  card: {
-    backgroundColor: colors.panel,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
-    marginBottom: spacing.md,
-    borderLeftWidth: 4,
-    shadowColor: "#000",
-    shadowOpacity: 0.03,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 1,
+  heroLede: {
+    fontSize: font.body,
+    color: colors.body,
+    marginTop: spacing.md,
+    lineHeight: 22,
   },
-  cardEyebrow: { fontSize: 10, color: colors.brandStrong, fontWeight: weight.bold, letterSpacing: 1 },
-  cardTitle: { fontSize: font.h3, fontWeight: weight.bold, color: colors.ink, marginTop: spacing.xs },
-  cardDesc: { fontSize: font.small, color: colors.muted, marginTop: spacing.xs, lineHeight: 20 },
-  cardMeta: { flexDirection: "row", gap: spacing.sm, marginTop: spacing.md, alignItems: "center" },
-  metaPill: {
-    fontSize: 11,
-    color: colors.brandStrong,
-    backgroundColor: colors.brandSoft,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 2,
-    borderRadius: radius.pill,
-    fontWeight: weight.bold,
+
+  // ── Section ─────────────────────────────────────────
+  section: {
+    marginBottom: spacing.xl,
   },
-  metaText: { fontSize: font.small, color: colors.muted },
+  sectionHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "baseline",
+    paddingBottom: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.line,
+  },
+  sectionKicker: {
+    ...kickerStyle,
+  },
+  sectionCount: {
+    fontSize: font.tiny,
+    color: colors.muted,
+    fontVariant: ["tabular-nums"],
+  },
+
+  // ── List (editorial divider list, no card) ─────────
+  list: {
+    marginTop: 0,
+  },
+  row: {
+    flexDirection: "row",
+    paddingVertical: spacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.line,
+    gap: spacing.lg,
+  },
+  rowLast: {
+    borderBottomWidth: 0,
+  },
+  rowNum: {
+    fontSize: 22,
+    fontWeight: weight.semibold,
+    color: colors.mutedSoft,
+    fontVariant: ["tabular-nums"],
+    width: 32,
+    lineHeight: 26,
+  },
+  rowBody: {
+    flex: 1,
+  },
+  rowTitle: {
+    fontSize: font.h3,
+    fontWeight: weight.semibold,
+    color: colors.ink,
+    letterSpacing: -0.2,
+    marginBottom: 4,
+    lineHeight: 20,
+  },
+  rowDesc: {
+    fontSize: font.small,
+    color: colors.body,
+    lineHeight: 19,
+    marginBottom: spacing.sm,
+  },
+  rowMeta: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    flexWrap: "wrap",
+  },
+  metaText: {
+    fontSize: font.tiny,
+    color: colors.muted,
+    fontWeight: weight.medium,
+  },
+  metaSep: {
+    fontSize: font.tiny,
+    color: colors.lineStrong,
+  },
+
+  // ── Tip — sidenote (no colored box, just text + rule) ─
   tip: {
-    backgroundColor: "#fef3c7",
-    borderRadius: radius.lg,
-    padding: spacing.lg,
-    borderLeftWidth: 4,
-    borderLeftColor: colors.accent,
+    paddingTop: spacing.lg,
+    borderTopWidth: 1,
+    borderTopColor: colors.line,
   },
-  tipTitle: { fontSize: font.body, fontWeight: weight.bold, color: colors.ink, marginBottom: spacing.xs },
-  tipText: { fontSize: font.small, color: colors.inkSoft, lineHeight: 20 },
+  tipKicker: {
+    ...kickerStyle,
+    color: colors.accent,
+    marginBottom: spacing.sm,
+  },
+  tipText: {
+    fontSize: font.small,
+    color: colors.body,
+    lineHeight: 20,
+  },
 });

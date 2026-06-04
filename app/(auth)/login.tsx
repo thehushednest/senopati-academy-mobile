@@ -172,7 +172,7 @@ const styles = StyleSheet.create({
   },
   brand: {
     fontSize: font.h1,
-    fontWeight: weight.extrabold,
+    fontWeight: weight.semibold,
     color: colors.brandStrong,
     letterSpacing: -0.5,
   },

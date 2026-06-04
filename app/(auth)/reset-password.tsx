@@ -162,7 +162,7 @@ export default function ResetPasswordScreen() {
 const styles = StyleSheet.create({
   container: { flexGrow: 1, padding: spacing.xl, backgroundColor: colors.bg },
   hero: { alignItems: "center", marginTop: spacing.xl, marginBottom: spacing.lg },
-  brand: { fontSize: font.h1, fontWeight: weight.extrabold, color: colors.brandStrong, letterSpacing: -0.5 },
+  brand: { fontSize: font.h1, fontWeight: weight.semibold, color: colors.brandStrong, letterSpacing: -0.5 },
   tagline: { fontSize: font.small, color: colors.muted, marginTop: spacing.xs },
   card: {
     backgroundColor: colors.panel,

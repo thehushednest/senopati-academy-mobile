@@ -12,7 +12,7 @@ import {
 import { Markdown } from "@/lib/markdown";
 import { moduleWebUrl, type ModulDetail } from "@/lib/api";
 import { useModul } from "@/lib/hooks";
-import { colors, font, radius, spacing, weight } from "@/lib/theme";
+import { colors, font, kickerStyle, radius, spacing, weight } from "@/lib/theme";
 
 export default function ModulDetailScreen() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
@@ -181,101 +181,235 @@ export default function ModulDetailScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { padding: spacing.lg, paddingBottom: spacing["2xl"] },
-  center: { flex: 1, alignItems: "center", justifyContent: "center", padding: spacing.xl, backgroundColor: colors.bg },
-  errorTitle: { fontSize: font.h2, fontWeight: weight.bold, color: colors.ink, marginBottom: spacing.xs },
-  errorDesc: { fontSize: font.small, color: colors.muted, textAlign: "center", marginBottom: spacing.lg },
-  hero: { marginBottom: spacing.lg },
-  eyebrow: { fontSize: 10, color: colors.brandStrong, fontWeight: weight.bold, letterSpacing: 1.5, marginBottom: spacing.xs },
-  title: { fontSize: 24, fontWeight: weight.extrabold, color: colors.ink, letterSpacing: -0.5, lineHeight: 30 },
-  desc: { fontSize: font.body, color: colors.inkSoft, lineHeight: 22, marginTop: spacing.sm },
-  metaRow: { flexDirection: "row", gap: spacing.sm, alignItems: "center", marginTop: spacing.md },
-  metaPill: { backgroundColor: colors.brandSoft, paddingHorizontal: spacing.sm, paddingVertical: 4, borderRadius: radius.pill },
-  metaPillText: { fontSize: 11, color: colors.brandStrong, fontWeight: weight.bold },
-  metaText: { fontSize: font.small, color: colors.muted },
-  mentor: { fontSize: font.small, color: colors.muted, marginTop: spacing.sm, fontStyle: "italic" },
-  card: {
-    backgroundColor: colors.panel,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
-    marginBottom: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.line,
+  container: {
+    padding: spacing.xl,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing["3xl"],
   },
-  cardEyebrow: { fontSize: 10, color: colors.brandStrong, fontWeight: weight.bold, letterSpacing: 1.5, marginBottom: spacing.xs },
-  cardTitle: { fontSize: font.h3, fontWeight: weight.bold, color: colors.ink, marginBottom: spacing.md },
-  objRow: { flexDirection: "row", gap: spacing.sm, marginBottom: spacing.xs },
-  objCheck: { color: colors.brand, fontWeight: weight.bold, fontSize: font.body },
-  objText: { flex: 1, color: colors.inkSoft, fontSize: font.small, lineHeight: 20 },
-  lessonRow: {
+  center: {
+    flex: 1, alignItems: "center", justifyContent: "center",
+    padding: spacing.xl, backgroundColor: colors.bg,
+  },
+  errorTitle: {
+    fontSize: font.h2, fontWeight: weight.semibold,
+    color: colors.ink, marginBottom: spacing.xs,
+  },
+  errorDesc: {
+    fontSize: font.small, color: colors.muted,
+    textAlign: "center", marginBottom: spacing.lg,
+  },
+
+  // ── Hero: editorial kicker + serif title + flat meta ──────
+  hero: {
+    paddingBottom: spacing.xl,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.line,
+    marginBottom: spacing.xl,
+  },
+  eyebrow: {
+    ...kickerStyle,
+    marginBottom: spacing.sm,
+  },
+  title: {
+    fontSize: font.hero,
+    fontWeight: weight.semibold,
+    color: colors.ink,
+    letterSpacing: -0.7,
+    lineHeight: font.hero * 1.1,
+  },
+  desc: {
+    fontSize: font.body,
+    color: colors.body,
+    lineHeight: 22,
+    marginTop: spacing.md,
+  },
+  metaRow: {
+    flexDirection: "row", flexWrap: "wrap",
+    gap: 8, alignItems: "center", marginTop: spacing.lg,
+  },
+  metaPill: {
+    paddingHorizontal: 0,
+    paddingVertical: 0,
+  },
+  metaPillText: {
+    fontSize: font.tiny,
+    color: colors.muted,
+    fontWeight: weight.medium,
+  },
+  metaText: {
+    fontSize: font.tiny,
+    color: colors.muted,
+    fontWeight: weight.medium,
+  },
+  mentor: {
+    fontSize: font.small,
+    color: colors.muted,
+    marginTop: spacing.md,
+  },
+
+  // ── Card (flat, no background, hairline top divider) ──────
+  card: {
+    paddingTop: spacing.xl,
+    paddingBottom: spacing.lg,
+    borderTopWidth: 1,
+    borderTopColor: colors.line,
+    marginBottom: 0,
+  },
+  cardEyebrow: { ...kickerStyle, marginBottom: spacing.sm },
+  cardTitle: {
+    fontSize: font.h2,
+    fontWeight: weight.semibold,
+    color: colors.ink,
+    letterSpacing: -0.3,
+    marginBottom: spacing.lg,
+  },
+
+  // ── Objectives (bullet rows) ──────────────────────────────
+  objRow: {
     flexDirection: "row",
-    alignItems: "center",
     gap: spacing.md,
     paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.sm,
-    borderRadius: radius.md,
-    marginBottom: spacing.xs,
+    alignItems: "flex-start",
   },
-  lessonRowActive: { backgroundColor: colors.brandSoft },
+  objCheck: {
+    color: colors.brand,
+    fontWeight: weight.semibold,
+    fontSize: font.body,
+    lineHeight: 22,
+  },
+  objText: {
+    flex: 1,
+    color: colors.inkSoft,
+    fontSize: font.body,
+    lineHeight: 22,
+  },
+
+  // ── Lesson row (numbered list, no pill bg) ────────────────
+  lessonRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: spacing.md,
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.line,
+  },
+  lessonRowActive: {
+    backgroundColor: "transparent",
+  },
   lessonNumber: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: colors.brandStrong,
+    width: 28,
+    height: 28,
     alignItems: "center",
     justifyContent: "center",
   },
-  lessonNumberText: { color: "#fff", fontWeight: weight.bold, fontSize: 12 },
-  lessonTitle: { color: colors.ink, fontSize: font.small, fontWeight: weight.semibold, lineHeight: 20 },
-  lessonMeta: { color: colors.muted, fontSize: font.tiny, marginTop: 2 },
-  lessonDetailTitle: { fontSize: font.h2, fontWeight: weight.bold, color: colors.ink, marginBottom: spacing.md, letterSpacing: -0.5 },
+  lessonNumberText: {
+    color: colors.mutedSoft,
+    fontWeight: weight.semibold,
+    fontSize: 18,
+    fontVariant: ["tabular-nums"],
+  },
+  lessonTitle: {
+    color: colors.ink,
+    fontSize: font.body,
+    fontWeight: weight.medium,
+    lineHeight: 21,
+  },
+  lessonMeta: {
+    color: colors.muted,
+    fontSize: font.tiny,
+    marginTop: 2,
+  },
+
+  // ── Lesson detail ─────────────────────────────────────────
+  lessonDetailTitle: {
+    fontSize: font.h1,
+    fontWeight: weight.semibold,
+    color: colors.ink,
+    marginBottom: spacing.lg,
+    letterSpacing: -0.4,
+    lineHeight: font.h1 * 1.15,
+  },
+
+  // ── Video button — primary CTA pill ───────────────────────
   videoButton: {
-    backgroundColor: colors.brandStrong,
+    backgroundColor: colors.ink,
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.lg,
-    borderRadius: radius.md,
+    borderRadius: radius.sm,
     alignItems: "center",
     marginBottom: spacing.md,
   },
-  videoButtonText: { color: "#fff", fontWeight: weight.bold, fontSize: font.body },
+  videoButtonText: {
+    color: colors.bg,
+    fontWeight: weight.semibold,
+    fontSize: font.small,
+    letterSpacing: 0.2,
+  },
+
   empty: {
     color: colors.muted,
-    fontStyle: "italic",
     fontSize: font.small,
     padding: spacing.md,
     textAlign: "center",
   },
-  emptyText: { color: colors.muted, fontStyle: "italic", fontSize: font.small, textAlign: "center" },
+  emptyText: {
+    color: colors.muted,
+    fontSize: font.small,
+    textAlign: "center",
+    lineHeight: 20,
+  },
+
   lessonNav: {
     flexDirection: "row",
     gap: spacing.sm,
-    marginTop: spacing.lg,
+    marginTop: spacing.xl,
   },
   navButton: {
     flex: 1,
     paddingVertical: spacing.md,
-    borderRadius: radius.md,
+    borderRadius: radius.sm,
     borderWidth: 1,
-    borderColor: colors.line,
+    borderColor: colors.lineStrong,
     alignItems: "center",
   },
-  navButtonPrimary: { backgroundColor: colors.brand, borderColor: colors.brand },
-  navButtonDisabled: { opacity: 0.4 },
-  navButtonText: { color: colors.inkSoft, fontWeight: weight.semibold, fontSize: font.small },
-  navButtonPrimaryText: { color: "#fff", fontWeight: weight.bold, fontSize: font.small },
+  navButtonPrimary: {
+    backgroundColor: colors.ink,
+    borderColor: colors.ink,
+  },
+  navButtonDisabled: { opacity: 0.3 },
+  navButtonText: {
+    color: colors.ink,
+    fontWeight: weight.medium,
+    fontSize: font.small,
+  },
+  navButtonPrimaryText: {
+    color: colors.bg,
+    fontWeight: weight.semibold,
+    fontSize: font.small,
+  },
+
   button: {
-    backgroundColor: colors.brand,
+    backgroundColor: colors.ink,
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.xl,
-    borderRadius: radius.md,
+    borderRadius: radius.sm,
     alignItems: "center",
     marginTop: spacing.md,
   },
-  buttonText: { color: "#fff", fontWeight: weight.bold, fontSize: font.body },
+  buttonText: {
+    color: colors.bg,
+    fontWeight: weight.semibold,
+    fontSize: font.body,
+    letterSpacing: 0.2,
+  },
   buttonSecondary: {
     backgroundColor: "transparent",
     borderWidth: 1,
-    borderColor: colors.brandStrong,
+    borderColor: colors.lineStrong,
   },
-  buttonSecondaryText: { color: colors.brandStrong, fontWeight: weight.bold, fontSize: font.body },
+  buttonSecondaryText: {
+    color: colors.ink,
+    fontWeight: weight.medium,
+    fontSize: font.body,
+  },
 });
