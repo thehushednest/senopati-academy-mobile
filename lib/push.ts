@@ -7,8 +7,9 @@
  * 3. POST token ke backend /api/notifications/register
  * 4. Backend simpan token + user mapping, kirim notif via Expo Push API
  *
- * Backend endpoint /api/notifications/register BELUM ADA — Phase 2b.
- * Untuk sementara, function ini cuma cache token di SecureStore.
+ * Backend endpoint /api/notifications/register sudah live di web Phase 3A
+ * (2026-06-16). Body: { token, platform }, Auth: Bearer JWT. Upsert ke
+ * PushSubscription table dengan kind="expo".
  */
 import Constants from "expo-constants";
 import * as Device from "expo-device";
@@ -74,8 +75,21 @@ export async function registerForPushNotifications(): Promise<string | null> {
     // ignore
   }
 
-  // Phase 2b: POST ke backend kalau endpoint sudah ada
-  // await api("/api/notifications/register", { method: "POST", body: JSON.stringify({ token, platform: Platform.OS }) });
+  // Phase 3A: POST token ke backend supaya server bisa kirim push.
+  // Auth Bearer JWT di-handle di api() helper (membaca dari sessionStore).
+  // Silent fail kalau user belum login atau network error — re-register
+  // akan jalan di mount berikutnya / saat user login.
+  try {
+    await api("/api/notifications/register", {
+      method: "POST",
+      body: JSON.stringify({
+        token,
+        platform: Platform.OS === "ios" ? "ios" : "android",
+      }),
+    });
+  } catch {
+    // ignore — bukan blocker untuk return token ke caller.
+  }
 
   return token;
 }
@@ -90,6 +104,6 @@ export async function getStoredPushToken(): Promise<string | null> {
   }
 }
 
-// Hindari unused-imports kalau backend register belum aktif
-void api;
+// sessionStore tidak dipakai di file ini langsung — di-consume via api().
+// Tetap di-import untuk type-checking + future use (mis. logout flush).
 void sessionStore;
