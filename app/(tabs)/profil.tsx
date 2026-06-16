@@ -99,7 +99,9 @@ export default function ProfilScreen() {
         <Row
           label="Edit profil"
           hint="Ubah nama, foto, biodata"
-          onPress={() => Linking.openURL("https://senopatiacademy.id/profil")}
+          // Expo Router typed routes regenerate saat `expo start` next jalan;
+          // cast supaya tsc bersih sebelum dev server ke-trigger.
+          onPress={() => router.push("/profile-edit" as never)}
         />
         <Row
           label="Ganti password"

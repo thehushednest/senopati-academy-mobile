@@ -138,6 +138,67 @@ export async function resetPassword(params: { email: string; password: string; o
   });
 }
 
+// ─── Profile / Biodata (Phase 3A) ─────────────────────────────────
+//
+// Endpoint-endpoint ini dulu cuma support session cookie. Setelah web
+// commit f11747d (getCurrentUser unified Bearer + session), mobile bisa
+// pakai endpoint sama dengan auth Bearer.
+
+export type BiodataPayload = {
+  fullName?: string | null;
+  schoolName?: string | null;
+  schoolGrade?: string | null;
+  phoneNumber?: string | null;
+  // Field lengkap ada di web BiodataForm. Untuk Phase 3A mobile cuma
+  // expose 4 field core supaya UI sederhana. Field lain (alamat,
+  // ortu, dll) defer ke web /profil via webview.
+};
+
+export async function getBiodata(): Promise<BiodataPayload | null> {
+  try {
+    return await api<BiodataPayload>("/api/onboarding/biodata");
+  } catch {
+    return null;
+  }
+}
+
+export async function updateBiodata(data: BiodataPayload): Promise<void> {
+  await api("/api/onboarding/biodata", {
+    method: "PUT",
+    body: JSON.stringify(data),
+  });
+}
+
+/**
+ * Upload avatar dari file URI (expo-image-picker output) ke backend.
+ * Backend resize ke 256×256 WebP + simpan ke MinIO. Return URL baru
+ * dengan cache-buster (`?v=<timestamp>`).
+ */
+export async function uploadAvatar(localUri: string): Promise<string> {
+  // React Native FormData: name diset manual karena fetch tidak parse
+  // filename dari path otomatis di iOS.
+  const form = new FormData();
+  const filename = localUri.split("/").pop() || "avatar.jpg";
+  const ext = filename.split(".").pop()?.toLowerCase() || "jpg";
+  const mime =
+    ext === "png" ? "image/png" : ext === "webp" ? "image/webp" : "image/jpeg";
+  // @ts-expect-error — RN FormData accepts {uri, name, type} object di field file
+  form.append("file", { uri: localUri, name: filename, type: mime });
+
+  const res = await api<{ ok: boolean; avatarUrl: string }>(
+    "/api/account/avatar",
+    {
+      method: "POST",
+      body: form,
+    },
+  );
+  return res.avatarUrl;
+}
+
+export async function deleteAvatar(): Promise<void> {
+  await api("/api/account/avatar", { method: "DELETE" });
+}
+
 // ─── Modul (Phase 2: API-backed) ──────────────────────────────────
 
 export type ModulListItem = {
