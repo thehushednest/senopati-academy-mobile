@@ -199,6 +199,99 @@ export async function deleteAvatar(): Promise<void> {
   await api("/api/account/avatar", { method: "DELETE" });
 }
 
+// ─── Live Session (Phase 3A medium) ───────────────────────────────
+
+export type LiveEventListItem = {
+  id: string;
+  title: string;
+  description: string | null;
+  format: string;
+  status: "scheduled" | "live" | "ended" | "cancelled";
+  scheduledAt: string;
+  durationMinutes: number;
+  joinCode: string | null;
+  host: { id: string; name: string } | null;
+  moduleSlug: string | null;
+};
+
+export type LiveEventDetail = LiveEventListItem & {
+  meetingUrl: string | null;
+  agenda: Array<{
+    minute: number;
+    block: string;
+    activity: string;
+    engagement?: string;
+  }> | null;
+  presentMaterialId: string | null;
+  presentSlide: number | null;
+  presentingSince: string | null;
+};
+
+export async function getLiveEvents(): Promise<LiveEventListItem[]> {
+  try {
+    const res = await api<{ events: LiveEventListItem[] }>("/api/live-events?upcoming=1");
+    return res.events;
+  } catch {
+    return [];
+  }
+}
+
+export async function getLiveEvent(id: string): Promise<LiveEventDetail | null> {
+  try {
+    const res = await api<{ event: LiveEventDetail }>(`/api/live-events/${id}`);
+    return res.event;
+  } catch {
+    return null;
+  }
+}
+
+export async function sendChatMessage(eventId: string, text: string): Promise<void> {
+  await api(`/api/live-events/${eventId}/chat`, {
+    method: "POST",
+    body: JSON.stringify({ text }),
+  });
+}
+
+// ─── Lab Gambar AI (forensik) ─────────────────────────────────────
+
+export type ImageForensikSection = {
+  n: number;
+  key: string;
+  title: string;
+  subtitle: string;
+  status: "ok" | "warn" | "bad";
+  findings: string[];
+};
+
+export type ImageForensikResult = {
+  verdict: string;
+  confidence: string;
+  ai: number;
+  real: number;
+  art: number;
+  top: string;
+  sections: ImageForensikSection[];
+};
+
+export async function analyzeImage(localUri: string): Promise<ImageForensikResult> {
+  const form = new FormData();
+  const filename = localUri.split("/").pop() || "image.jpg";
+  const ext = filename.split(".").pop()?.toLowerCase() || "jpg";
+  const mime =
+    ext === "png" ? "image/png" : ext === "webp" ? "image/webp" : "image/jpeg";
+  // @ts-expect-error — RN FormData accepts {uri, name, type} object di field file
+  form.append("image", { uri: localUri, name: filename, type: mime });
+
+  const res = await api<{ ok: boolean; result: ImageForensikResult; error?: string }>(
+    "/api/lab/image-forensik",
+    { method: "POST", body: form },
+  );
+  if (!res.ok || !res.result) {
+    throw new Error(res.error || "Analisis gagal");
+  }
+  return res.result;
+}
+
 // ─── Modul (Phase 2: API-backed) ──────────────────────────────────
 
 export type ModulListItem = {
