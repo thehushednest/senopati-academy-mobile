@@ -40,3 +40,6 @@ yarn-error.*
 /ios
 /android
 dist/
+
+# design preview workflow (HTML mockup + reference assets, dev only)
+preview/

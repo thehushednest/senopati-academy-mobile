@@ -2,20 +2,20 @@ import { Link, useRouter } from "expo-router";
 import { useState } from "react";
 import {
   ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
+import { AuthLayout } from "@/components/AuthLayout";
+import { AuthInput } from "@/components/AuthInput";
 import { ApiError, requestOtp, signup } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
-import { colors, font, radius, spacing, weight } from "@/lib/theme";
+import { colors, font, fontFamily, radius, spacing, weight } from "@/lib/theme";
 
 type Step = "email" | "verify";
+
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function SignupScreen() {
   const router = useRouter();
@@ -82,192 +82,246 @@ export default function SignupScreen() {
     }
   };
 
+  const emailValid = EMAIL_REGEX.test(email.trim());
+
   return (
-    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
-      <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+    <AuthLayout
+      showBack
+      heroContent={
         <View style={styles.hero}>
-          <Text style={styles.brand}>Senopati Academy</Text>
-          <Text style={styles.tagline}>Daftar gratis, mulai belajar AI hari ini</Text>
-        </View>
-
-        <View style={styles.card}>
+          <Text style={styles.eyebrow}>SENOPATI ACADEMY</Text>
           {step === "email" ? (
-            <>
-              <Text style={styles.title}>Daftar akun</Text>
-              <Text style={styles.subtitle}>Kami akan kirim kode verifikasi 6 digit ke emailmu.</Text>
-
-              <View style={styles.field}>
-                <Text style={styles.label}>Nama panggilan (opsional)</Text>
-                <TextInput
-                  style={styles.input}
-                  value={name}
-                  onChangeText={setName}
-                  placeholder="Sasa, Raka, …"
-                  placeholderTextColor={colors.mutedSoft}
-                  autoComplete="name-given"
-                  editable={!busy}
-                />
-              </View>
-
-              <View style={styles.field}>
-                <Text style={styles.label}>Email</Text>
-                <TextInput
-                  style={styles.input}
-                  value={email}
-                  onChangeText={setEmail}
-                  placeholder="kamu@email.com"
-                  placeholderTextColor={colors.mutedSoft}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  autoComplete="email"
-                  autoCorrect={false}
-                  editable={!busy}
-                />
-              </View>
-
-              {error ? <Text style={styles.error}>{error}</Text> : null}
-
-              <TouchableOpacity
-                style={[styles.button, busy && styles.buttonDisabled]}
-                onPress={sendOtp}
-                disabled={busy}
-              >
-                {busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Kirim Kode</Text>}
-              </TouchableOpacity>
-            </>
+            <Text style={styles.headline}>
+              Bikin akun,{"\n"}
+              <Text style={styles.headlineAccent}>3 langkah cepat.</Text>
+            </Text>
           ) : (
-            <>
-              <Text style={styles.title}>Cek inboxmu</Text>
-              <Text style={styles.subtitle}>
-                Kode 6 digit dikirim ke <Text style={{ fontWeight: weight.bold }}>{email}</Text>. Berlaku 10
-                menit.
-              </Text>
-
-              <View style={styles.field}>
-                <Text style={styles.label}>Kode OTP</Text>
-                <TextInput
-                  style={[styles.input, styles.otpInput]}
-                  value={otp}
-                  onChangeText={(v) => setOtp(v.replace(/[^0-9]/g, "").slice(0, 6))}
-                  placeholder="000000"
-                  placeholderTextColor={colors.mutedSoft}
-                  keyboardType="number-pad"
-                  autoComplete="one-time-code"
-                  textContentType="oneTimeCode"
-                  maxLength={6}
-                  editable={!busy}
-                />
-              </View>
-
-              <View style={styles.field}>
-                <Text style={styles.label}>Buat password (min. 8 karakter)</Text>
-                <TextInput
-                  style={styles.input}
-                  value={password}
-                  onChangeText={setPassword}
-                  placeholder="••••••••"
-                  placeholderTextColor={colors.mutedSoft}
-                  secureTextEntry
-                  autoCapitalize="none"
-                  autoComplete="new-password"
-                  editable={!busy}
-                />
-              </View>
-
-              {error ? <Text style={styles.error}>{error}</Text> : null}
-
-              <TouchableOpacity
-                style={[styles.button, busy && styles.buttonDisabled]}
-                onPress={verifyAndCreate}
-                disabled={busy}
-              >
-                {busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Daftar</Text>}
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                onPress={sendOtp}
-                disabled={cooldown > 0 || busy}
-                style={{ marginTop: spacing.md }}
-              >
-                <Text style={[styles.linkSmall, (cooldown > 0 || busy) && { opacity: 0.4 }]}>
-                  {cooldown > 0 ? `Kirim ulang dalam ${cooldown}s` : "Kirim ulang kode"}
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                onPress={() => {
-                  setStep("email");
-                  setOtp("");
-                  setPassword("");
-                  setError(null);
-                }}
-                disabled={busy}
-              >
-                <Text style={styles.linkSmall}>← Ubah email</Text>
-              </TouchableOpacity>
-            </>
+            <Text style={styles.headline}>
+              Cek inbox,{"\n"}
+              <Text style={styles.headlineAccent}>kami sudah kirim kode.</Text>
+            </Text>
           )}
         </View>
+      }
+    >
+      {step === "email" ? (
+        <>
+          <Text style={styles.subtitle}>
+            Gratis 100% untuk pelajar SMA. Kami kirim kode verifikasi 6 digit ke
+            email kamu.
+          </Text>
 
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>Sudah punya akun?</Text>
-          <Link href="/(auth)/login" style={styles.linkPrimary}>
-            Masuk
-          </Link>
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+          <AuthInput
+            label="NAMA PANGGILAN (OPSIONAL)"
+            value={name}
+            onChangeText={setName}
+            placeholder="Sasa, Raka, …"
+            autoComplete="name-given"
+            editable={!busy}
+          />
+
+          <AuthInput
+            label="EMAIL"
+            value={email}
+            onChangeText={setEmail}
+            placeholder="email@contoh.com"
+            keyboardType="email-address"
+            autoCapitalize="none"
+            autoComplete="email"
+            autoCorrect={false}
+            editable={!busy}
+            isValid={emailValid}
+          />
+
+          {error ? <Text style={styles.error}>{error}</Text> : null}
+
+          <TouchableOpacity
+            style={[styles.primaryBtn, busy && styles.btnDisabled]}
+            onPress={sendOtp}
+            disabled={busy || !emailValid}
+            activeOpacity={0.85}
+          >
+            {busy ? (
+              <ActivityIndicator color={colors.bg} />
+            ) : (
+              <Text style={styles.primaryBtnText}>KIRIM KODE OTP</Text>
+            )}
+          </TouchableOpacity>
+
+          <View style={styles.footer}>
+            <Text style={styles.footerText}>Sudah punya akun?</Text>
+            <Link href="/(auth)/login" asChild>
+              <TouchableOpacity>
+                <Text style={styles.footerLink}>Masuk</Text>
+              </TouchableOpacity>
+            </Link>
+          </View>
+        </>
+      ) : (
+        <>
+          <Text style={styles.subtitle}>
+            Kode 6 digit dikirim ke{" "}
+            <Text style={{ fontWeight: weight.bold, color: colors.ink }}>
+              {email}
+            </Text>
+            . Berlaku 10 menit.
+          </Text>
+
+          <AuthInput
+            label="KODE OTP"
+            value={otp}
+            onChangeText={(v) => setOtp(v.replace(/[^0-9]/g, "").slice(0, 6))}
+            placeholder="000000"
+            keyboardType="number-pad"
+            autoComplete="one-time-code"
+            textContentType="oneTimeCode"
+            maxLength={6}
+            editable={!busy}
+          />
+
+          <AuthInput
+            label="BUAT PASSWORD (MIN. 8 KARAKTER)"
+            value={password}
+            onChangeText={setPassword}
+            placeholder="••••••••"
+            autoCapitalize="none"
+            autoComplete="new-password"
+            editable={!busy}
+            isPassword
+          />
+
+          {error ? <Text style={styles.error}>{error}</Text> : null}
+
+          <TouchableOpacity
+            style={[styles.primaryBtn, busy && styles.btnDisabled]}
+            onPress={verifyAndCreate}
+            disabled={busy}
+            activeOpacity={0.85}
+          >
+            {busy ? (
+              <ActivityIndicator color={colors.bg} />
+            ) : (
+              <Text style={styles.primaryBtnText}>DAFTAR</Text>
+            )}
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={sendOtp}
+            disabled={cooldown > 0 || busy}
+            style={styles.resendWrap}
+          >
+            <Text
+              style={[
+                styles.resendText,
+                (cooldown > 0 || busy) && { opacity: 0.4 },
+              ]}
+            >
+              {cooldown > 0 ? `Kirim ulang dalam ${cooldown}s` : "Kirim ulang kode"}
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => {
+              setStep("email");
+              setOtp("");
+              setPassword("");
+              setError(null);
+            }}
+            style={styles.changeEmailWrap}
+          >
+            <Text style={styles.changeEmailText}>Ganti email</Text>
+          </TouchableOpacity>
+        </>
+      )}
+    </AuthLayout>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flexGrow: 1, padding: spacing.xl, backgroundColor: colors.bg },
-  hero: { alignItems: "center", marginTop: spacing.xl, marginBottom: spacing.lg },
-  brand: { fontSize: font.h1, fontWeight: weight.semibold, color: colors.brandStrong, letterSpacing: -0.5 },
-  tagline: { fontSize: font.small, color: colors.muted, marginTop: spacing.xs },
-  card: {
-    backgroundColor: colors.panel,
-    borderRadius: radius.xl,
-    padding: spacing.xl,
-    shadowColor: "#000",
-    shadowOpacity: 0.04,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 2,
+  hero: {
+    gap: spacing.sm,
   },
-  title: { fontSize: font.h2, fontWeight: weight.bold, color: colors.ink, marginBottom: spacing.xs },
-  subtitle: { fontSize: font.small, color: colors.muted, marginBottom: spacing.lg, lineHeight: 20 },
-  field: { marginBottom: spacing.md },
-  label: { fontSize: font.small, color: colors.inkSoft, fontWeight: weight.semibold, marginBottom: spacing.xs },
-  input: {
-    backgroundColor: colors.bgAlt,
-    borderRadius: radius.md,
-    padding: spacing.md,
-    fontSize: font.body,
-    color: colors.ink,
-    borderWidth: 1,
-    borderColor: colors.line,
+  eyebrow: {
+    fontSize: font.tiny,
+    fontWeight: weight.bold,
+    color: colors.bg,
+    letterSpacing: 1.8,
+    opacity: 0.85,
   },
-  otpInput: { letterSpacing: 8, fontSize: 22, textAlign: "center", fontWeight: weight.bold },
+  headline: {
+    fontFamily: fontFamily.heading,
+    fontSize: font.hero,
+    fontWeight: weight.semibold,
+    color: colors.bg,
+    letterSpacing: -0.8,
+    lineHeight: font.hero * 1.15,
+  },
+  headlineAccent: {
+    fontFamily: fontFamily.heading,
+    fontStyle: "italic",
+    color: colors.bg,
+    opacity: 0.92,
+  },
+  subtitle: {
+    fontSize: font.small,
+    color: colors.muted,
+    lineHeight: font.small * 1.55,
+    marginBottom: spacing.lg,
+  },
   error: {
     color: colors.danger,
     fontSize: font.small,
-    marginBottom: spacing.md,
-    backgroundColor: "#fee2e2",
+    backgroundColor: "rgba(220, 38, 38, 0.08)",
     padding: spacing.sm,
     borderRadius: radius.sm,
+    marginBottom: spacing.md,
   },
-  button: {
-    backgroundColor: colors.brand,
-    paddingVertical: spacing.md,
-    borderRadius: radius.md,
+  primaryBtn: {
+    backgroundColor: colors.brandStrong,
+    paddingVertical: spacing.md + 2,
+    borderRadius: radius.pill,
     alignItems: "center",
-    marginTop: spacing.sm,
   },
-  buttonDisabled: { opacity: 0.6 },
-  buttonText: { color: "#fff", fontSize: font.body, fontWeight: weight.bold },
-  linkSmall: { color: colors.brandStrong, fontSize: font.small, textAlign: "center", fontWeight: weight.semibold, marginTop: spacing.sm },
-  footer: { flexDirection: "row", justifyContent: "center", alignItems: "center", marginTop: spacing.xl, gap: spacing.xs },
-  footerText: { color: colors.muted, fontSize: font.small },
-  linkPrimary: { color: colors.brandStrong, fontSize: font.small, fontWeight: weight.bold },
+  primaryBtnText: {
+    color: colors.bg,
+    fontSize: font.body,
+    fontWeight: weight.bold,
+    letterSpacing: 0.5,
+  },
+  btnDisabled: {
+    opacity: 0.6,
+  },
+  resendWrap: {
+    alignItems: "center",
+    paddingVertical: spacing.md,
+  },
+  resendText: {
+    fontSize: font.small,
+    color: colors.brandStrong,
+    fontWeight: weight.semibold,
+  },
+  changeEmailWrap: {
+    alignItems: "center",
+    paddingVertical: spacing.sm,
+  },
+  changeEmailText: {
+    fontSize: font.small,
+    color: colors.muted,
+  },
+  footer: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: spacing.xs,
+    marginTop: spacing["2xl"],
+  },
+  footerText: {
+    fontSize: font.small,
+    color: colors.muted,
+  },
+  footerLink: {
+    fontSize: font.small,
+    color: colors.brandStrong,
+    fontWeight: weight.bold,
+  },
 });

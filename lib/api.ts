@@ -44,7 +44,21 @@ export async function api<T = unknown>(path: string, opts: FetchOptions = {}): P
   const url = path.startsWith("http") ? path : `${BASE}${path}`;
   const headers = await buildHeaders(opts);
 
-  const res = await fetch(url, { ...opts, headers });
+  let res: Response;
+  try {
+    res = await fetch(url, { ...opts, headers });
+  } catch (err) {
+    // Network-level fail (DNS, TLS, no connectivity). Sebelumnya thrown as
+    // TypeError "Network request failed" dengan no detail — user lihat
+    // "Tidak bisa masuk. Coba lagi." generic. Wrap jadi ApiError supaya
+    // error message lebih informatif.
+    const detail = err instanceof Error ? err.message : String(err);
+    throw new ApiError(
+      0,
+      `Tidak bisa terhubung ke server. Cek koneksi internet kamu. (${detail})`,
+      { url, error: detail },
+    );
+  }
 
   const ct = res.headers.get("content-type") || "";
   const isJson = ct.includes("application/json");

@@ -2,20 +2,24 @@ import { Link, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
+import { AuthLayout } from "@/components/AuthLayout";
+import { AuthInput } from "@/components/AuthInput";
 import { useAuth } from "@/lib/auth-context";
 import { ApiError } from "@/lib/api";
-import { biometricLabel, getBiometricCapability, tryBiometricUnlock } from "@/lib/biometric";
+import {
+  biometricLabel,
+  getBiometricCapability,
+  tryBiometricUnlock,
+} from "@/lib/biometric";
 import { sessionStore } from "@/lib/storage";
-import { colors, font, radius, spacing, weight } from "@/lib/theme";
+import { colors, font, fontFamily, radius, spacing, weight } from "@/lib/theme";
+
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -74,210 +78,186 @@ export default function LoginScreen() {
     }
   };
 
+  const emailValid = EMAIL_REGEX.test(email.trim());
+
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1 }}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-    >
-      <ScrollView
-        contentContainerStyle={styles.container}
-        keyboardShouldPersistTaps="handled"
-      >
+    <AuthLayout
+      showBack
+      heroContent={
         <View style={styles.hero}>
-          <Text style={styles.brand}>Senopati Academy</Text>
-          <Text style={styles.tagline}>Belajar AI, siap hadapi masa depan</Text>
+          <Text style={styles.eyebrow}>SENOPATI ACADEMY</Text>
+          <Text style={styles.headline}>
+            Halo,{"\n"}
+            <Text style={styles.headlineAccent}>masuk akun.</Text>
+          </Text>
         </View>
+      }
+    >
+      <Text style={styles.subtitle}>
+        Lanjut belajar AI dari mana saja — modul, live session, dan Cerita Jeda
+        kamu siap di sini.
+      </Text>
 
-        <View style={styles.card}>
-          <Text style={styles.title}>Selamat datang kembali</Text>
-          <Text style={styles.subtitle}>Masuk dengan email & password kamu.</Text>
+      <AuthInput
+        label="EMAIL"
+        value={email}
+        onChangeText={setEmail}
+        placeholder="email@contoh.com"
+        keyboardType="email-address"
+        autoCapitalize="none"
+        autoComplete="email"
+        autoCorrect={false}
+        editable={!busy}
+        isValid={emailValid}
+      />
 
-          <View style={styles.field}>
-            <Text style={styles.label}>Email</Text>
-            <TextInput
-              style={styles.input}
-              value={email}
-              onChangeText={setEmail}
-              placeholder="kamu@email.com"
-              placeholderTextColor={colors.mutedSoft}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoComplete="email"
-              autoCorrect={false}
-              editable={!busy}
-            />
-          </View>
+      <AuthInput
+        label="PASSWORD"
+        value={password}
+        onChangeText={setPassword}
+        placeholder="••••••••"
+        autoCapitalize="none"
+        autoComplete="password"
+        editable={!busy}
+        isPassword
+      />
 
-          <View style={styles.field}>
-            <Text style={styles.label}>Password</Text>
-            <TextInput
-              style={styles.input}
-              value={password}
-              onChangeText={setPassword}
-              placeholder="••••••••"
-              placeholderTextColor={colors.mutedSoft}
-              secureTextEntry
-              autoCapitalize="none"
-              autoComplete="password"
-              editable={!busy}
-            />
-          </View>
+      <Link href="/(auth)/reset-password" asChild>
+        <TouchableOpacity style={styles.forgotWrap}>
+          <Text style={styles.forgot}>Lupa password?</Text>
+        </TouchableOpacity>
+      </Link>
 
-          {error ? <Text style={styles.error}>{error}</Text> : null}
+      {error ? <Text style={styles.error}>{error}</Text> : null}
 
-          <TouchableOpacity
-            style={[styles.button, busy && styles.buttonDisabled]}
-            onPress={handleSubmit}
-            disabled={busy}
-          >
-            {busy ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.buttonText}>Masuk</Text>
-            )}
+      <TouchableOpacity
+        style={[styles.primaryBtn, busy && styles.btnDisabled]}
+        onPress={handleSubmit}
+        disabled={busy}
+        activeOpacity={0.85}
+      >
+        {busy ? (
+          <ActivityIndicator color={colors.bg} />
+        ) : (
+          <Text style={styles.primaryBtnText}>MASUK</Text>
+        )}
+      </TouchableOpacity>
+
+      {bioShadowReady ? (
+        <TouchableOpacity
+          style={styles.bioBtn}
+          onPress={handleBiometric}
+          disabled={busy}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.bioBtnText}>🔒 Masuk dengan {bioLabel}</Text>
+        </TouchableOpacity>
+      ) : null}
+
+      <View style={styles.footer}>
+        <Text style={styles.footerText}>Belum punya akun?</Text>
+        <Link href="/(auth)/signup" asChild>
+          <TouchableOpacity>
+            <Text style={styles.footerLink}>Daftar sekarang</Text>
           </TouchableOpacity>
-
-          {bioShadowReady ? (
-            <TouchableOpacity style={styles.bioButton} onPress={handleBiometric} disabled={busy}>
-              <Text style={styles.bioButtonText}>🔒 Masuk dengan {bioLabel}</Text>
-            </TouchableOpacity>
-          ) : null}
-
-          <Link href="/(auth)/reset-password" style={styles.linkSmall}>
-            Lupa password?
-          </Link>
-        </View>
-
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>Belum punya akun?</Text>
-          <Link href="/(auth)/signup" style={styles.linkPrimary}>
-            Daftar sekarang
-          </Link>
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+        </Link>
+      </View>
+    </AuthLayout>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flexGrow: 1,
-    padding: spacing.xl,
-    backgroundColor: colors.bg,
-  },
   hero: {
-    alignItems: "center",
-    marginTop: spacing["2xl"],
-    marginBottom: spacing.xl,
+    gap: spacing.sm,
   },
-  brand: {
-    fontSize: font.h1,
-    fontWeight: weight.semibold,
-    color: colors.brandStrong,
-    letterSpacing: -0.5,
-  },
-  tagline: {
-    fontSize: font.small,
-    color: colors.muted,
-    marginTop: spacing.xs,
-  },
-  card: {
-    backgroundColor: colors.panel,
-    borderRadius: radius.xl,
-    padding: spacing.xl,
-    shadowColor: "#000",
-    shadowOpacity: 0.04,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 2,
-  },
-  title: {
-    fontSize: font.h2,
+  eyebrow: {
+    fontSize: font.tiny,
     fontWeight: weight.bold,
-    color: colors.ink,
-    marginBottom: spacing.xs,
+    color: colors.bg,
+    letterSpacing: 1.8,
+    opacity: 0.85,
+  },
+  headline: {
+    fontFamily: fontFamily.heading,
+    fontSize: font.hero,
+    fontWeight: weight.semibold,
+    color: colors.bg,
+    letterSpacing: -0.8,
+    lineHeight: font.hero * 1.15,
+  },
+  headlineAccent: {
+    fontFamily: fontFamily.heading,
+    fontStyle: "italic",
+    color: colors.bg,
+    opacity: 0.92,
   },
   subtitle: {
     fontSize: font.small,
     color: colors.muted,
+    lineHeight: font.small * 1.55,
     marginBottom: spacing.lg,
   },
-  field: {
+  forgotWrap: {
+    alignSelf: "flex-end",
+    paddingVertical: spacing.xs,
     marginBottom: spacing.md,
   },
-  label: {
+  forgot: {
     fontSize: font.small,
-    color: colors.inkSoft,
+    color: colors.brandStrong,
     fontWeight: weight.semibold,
-    marginBottom: spacing.xs,
-  },
-  input: {
-    backgroundColor: colors.bgAlt,
-    borderRadius: radius.md,
-    padding: spacing.md,
-    fontSize: font.body,
-    color: colors.ink,
-    borderWidth: 1,
-    borderColor: colors.line,
   },
   error: {
     color: colors.danger,
     fontSize: font.small,
-    marginBottom: spacing.md,
-    backgroundColor: "#fee2e2",
+    backgroundColor: "rgba(220, 38, 38, 0.08)",
     padding: spacing.sm,
     borderRadius: radius.sm,
+    marginBottom: spacing.md,
   },
-  button: {
-    backgroundColor: colors.brand,
-    paddingVertical: spacing.md,
-    borderRadius: radius.md,
+  primaryBtn: {
+    backgroundColor: colors.brandStrong,
+    paddingVertical: spacing.md + 2,
+    borderRadius: radius.pill,
     alignItems: "center",
-    marginTop: spacing.sm,
   },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  buttonText: {
-    color: "#fff",
+  primaryBtnText: {
+    color: colors.bg,
     fontSize: font.body,
     fontWeight: weight.bold,
+    letterSpacing: 0.5,
   },
-  linkSmall: {
-    color: colors.brandStrong,
-    fontSize: font.small,
-    marginTop: spacing.md,
-    textAlign: "center",
-    fontWeight: weight.semibold,
+  btnDisabled: {
+    opacity: 0.6,
   },
-  footer: {
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
-    marginTop: spacing.xl,
-    gap: spacing.xs,
-  },
-  footerText: {
-    color: colors.muted,
-    fontSize: font.small,
-  },
-  linkPrimary: {
-    color: colors.brandStrong,
-    fontSize: font.small,
-    fontWeight: weight.bold,
-  },
-  bioButton: {
+  bioBtn: {
     backgroundColor: colors.brandSoft,
     paddingVertical: spacing.md,
-    borderRadius: radius.md,
+    borderRadius: radius.pill,
     alignItems: "center",
     marginTop: spacing.md,
     borderWidth: 1,
     borderColor: colors.brand,
   },
-  bioButtonText: {
+  bioBtnText: {
     color: colors.brandStrong,
     fontSize: font.body,
+    fontWeight: weight.bold,
+  },
+  footer: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: spacing.xs,
+    marginTop: spacing["2xl"],
+  },
+  footerText: {
+    fontSize: font.small,
+    color: colors.muted,
+  },
+  footerLink: {
+    fontSize: font.small,
+    color: colors.brandStrong,
     fontWeight: weight.bold,
   },
 });

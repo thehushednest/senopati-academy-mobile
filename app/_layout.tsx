@@ -44,7 +44,7 @@ function RootLayoutGate() {
     const inAppGroup = segments[0] === "(tabs)";
 
     if (!user && inAppGroup) {
-      router.replace("/(auth)/login");
+      router.replace("/(auth)/welcome");
     } else if (user && inAuthGroup) {
       router.replace("/(tabs)");
     }
