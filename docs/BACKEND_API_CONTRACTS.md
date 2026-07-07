@@ -151,19 +151,44 @@ Pelengkap `senopati-backend-connect-guide.md` (cara connect + akun test).
 
 ## Cerita Jeda (interactive story)
 
+> **PENTING — pisahkan STATE vs KONTEN.** Endpoint start/advance/choice/finalize
+> hanya mengelola **state** (posisi `currentBeatCode`, saldo, flags, dll), TIDAK
+> mengembalikan teks cerita. Untuk **konten** (narasi, dialog, pilihan, aset) baca
+> `GET /api/cerita/[slug]/beat/[code]`.
+>
+> **Alur render:**
+> 1. `POST /start` → dapat `{playthrough}` (punya `state.currentBeatCode`, biasanya "1.0").
+> 2. `GET /beat/[currentBeatCode]` → render beat itu.
+> 3. Beat tanpa choices → maju via `POST /advance {nextCode: beat.defaultNextCode}`.
+>    Beat dengan choices → user pilih → `POST /choice {choiceId}`.
+>    Keduanya mengembalikan **state** baru (server resolve beat berikut + apply efek).
+> 4. Ambil `currentBeatCode` baru dari state → `GET /beat/[code]` lagi. Ulangi.
+> 5. Selesai → `POST /finalize` (kunci skor psikometri, dsb).
+
+### `[GET]` /api/cerita/[slug]/beat/[code] — _Bearer_  ⟵ KONTEN beat (baru)
+- **res**: `{ beat: {`
+  - `code, beatType, dayNumber, timeOfDay, location,`
+  - `narration, dialogues:[{speaker,text,emotion?}], enterTransition, authorNote,`
+  - `backgroundUrl, characterUrls:[], uiOverlayUrl, audioUrl,`  ← URL siap pakai (relative ke base)
+  - `interactive` (null utk dialogue; utk beat khusus: `{kind:"investigation"|"compose_message"|...}`),
+  - `choices:[{id,label,body}],`
+  - `defaultNextCode` (beat berikut kalau tak ada choices)
+  - `} }`
+
+### `[POST]` /api/cerita/[slug]/start — _Bearer_
+- **res**: `{ playthrough }` (state; `state.currentBeatCode` = beat awal)
+
 ### `[POST]` /api/cerita/[slug]/advance — _Bearer_
-- **req**: `playthroughId:string, nextCode:string`
-- **res**: `{ message }`
+- **req**: `playthroughId:string, nextCode:string` (biasanya = `beat.defaultNextCode`)
+- **res**: state baru (`currentBeatCode` sudah pindah)
 
 ### `[POST]` /api/cerita/[slug]/choice — _Bearer_
 - **req**: `playthroughId:string, choiceId:string`
-- **res**: `{ message }`
+- **res**: state baru (server resolve cabang + apply efek/trait Big5)
 
 ### `[POST]` /api/cerita/[slug]/finalize — _Bearer_
 - **req**: `playthroughId:string`
 - **res**: `{ message }`
-
-### `[POST]` /api/cerita/[slug]/start — _Bearer_
 
 
 ## Lab AI
