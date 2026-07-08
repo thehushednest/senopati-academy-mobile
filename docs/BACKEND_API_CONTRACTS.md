@@ -159,6 +159,12 @@ Pelengkap `senopati-backend-connect-guide.md` (cara connect + akun test).
 - **res**: `{ reviews }`
 
 
+### `[GET]` /api/learn — _Bearer_  ⟵ agregat Learn as You Go (baru)
+- **res**: `{ stats:{totalVideoModules,myCompletedModules,myInProgressModules,myTotalWatchSec}, continueWatching:[{moduleSlug,moduleTitle,sessionIndex,sessionTitle,lastPositionSec,totalWatchedSec,lastActiveAt,href}], catalog:[{slug,title,excerpt,level,duration,topics,categorySlug,categoryName,mentorName,href, mySummary:{completed,total,percent,status,lastActiveAt}}] }`
+
+### `[GET]` /api/kelas — _Bearer_  ⟵ agregat Kelas Aktif (baru)
+- **res**: `{ count, activeModules:[{moduleSlug,title,level,duration,categoryName,mentorName,completed,total,percent,nextSessionLabel,lastActivity,estimatedFinish,isComplete, nextAction:{kind:"resume"|"certificate",href,label}, openModuleHref, nextSession:{index,title,summary}|null}] }`
+
 ## Cerita Jeda (interactive story)
 
 > **PENTING — pisahkan STATE vs KONTEN.** Endpoint start/advance/choice/finalize
@@ -348,7 +354,13 @@ Pelengkap `senopati-backend-connect-guide.md` (cara connect + akun test).
 
 ## Diskusi, tugas, sertifikat
 
+### `[GET]` /api/mobile/assignment — _Bearer_  ⟵ KONTEN tugas (baru)
+- **query**: `moduleSlug:string, sessionIndex:number`
+- **res**: `{ module:{slug,title}, locked:boolean, session:{index,title,summary}, task:{title,brief,steps:[{num,title,desc}],rubric:[{title,desc}],deadlineLabel,dueAt,reviewSla,points}|null, submission:{status,submittedAt,grade,feedback,attachmentUrl,text,reviewedAt}|null }`
+- `locked=true` (modul Paham AI, tugas luring) → `task=null`, tampilkan info luring. `/api/assignment` (lama) hanya balikin submission (state), ini yang baca instruksinya.
+
 ### `[GET]` /api/assignment — _Bearer_
+- **res**: `{ submissions }` (submission milik user; instruksi tugas ada di `/api/mobile/assignment`)
 
 ### `[POST]` /api/assignment/presigned-upload — _Bearer_
 - **req**: `moduleSlug:string, sessionIndex:number, filename:string, contentType:string, sizeBytes:number`
@@ -405,6 +417,21 @@ Pelengkap `senopati-backend-connect-guide.md` (cara connect + akun test).
 - **query**: `category` (domestik|luar_negeri, exact), `country` (contains), `q`, `page`, `pageSize`
 - **res**: `{ items:[{slug,name,category,country,programName,summary,sectors:[],salaryMinIdr,salaryMaxIdr,durationMonths}], total, page, pageSize, filters:{categories} }`
 - **detail** `[GET] /api/mobile/karir/kerja/[slug]`: `{ ...,requirements:[],officialUrl,targetAudience,isOverseas, guide:{timeline,documents,costs,examPrep,safetyTips,rights,faqs,verifiedChannels}|null }`
+
+### Career Quiz RIASEC (baru)
+- `[GET] /api/mobile/karir/quiz` — `{ questions:[{id,text,dim}], scale:[{value,label}], dimLabels }` (jawab skala 1..5)
+- `[POST] /api/mobile/karir/quiz/submit` — req `{ answers:{[qid]:1..5} }` → `{ profile }` (skor RIASEC dihitung server + upsert CareerProfile)
+- `[GET] /api/mobile/karir/profile` — `{ profile }` (CareerProfile atau `null` = belum kuis → arahkan ke kuis)
+- Efek: `[GET] /api/mobile/karir/jurusan/[slug]` kini isi `matchPct` (0-100) kalau profil ada, else `null`.
+
+### Simulasi TOEFL (baru)
+- `[GET] /api/mobile/karir/toefl` — `{ items:[{id,format:"iBT_2026"|"iBT_2023_legacy"|"ITP",title,description,theme|null,sections:[{skill,durationMinutes?,adaptive?}]}], total }`
+- `[GET] /api/mobile/karir/toefl/[testId]` — konten penuh **tanpa kunci jawaban**. Bentuk per `format`: 2026 → `{reading,listening}` adaptive (stages routing/easy/hard) + `writing{buildSentence(chunks diacak),email,academicDiscussion}` + `speaking`; ITP → `{listening,structure,reading}` auto-grade; legacy → `{reading,listening,speaking,writing}`. Question: `{kind,number,prompt,options?,pickCount?}` (tanpa `answer`/`alt`).
+
+### Simulasi IELTS (baru)
+- `[GET] /api/mobile/karir/ielts` — `{ full:[...], sample:[...] }`, item `{id,title,description,level, listening:{durationMinutes,sectionCount,questionCount}, reading:{...}, hasWriting }`
+- `[GET] /api/mobile/karir/ielts/[testId]` — `{ id,title,description,level, listening:{durationMinutes,sections:[{number,title,body,questions}]}, reading:{...}, writing?{task1,task2} }`. Question: `{kind:"tf_ng"|"fill_blank"|"multiple_choice",number,prompt,options?}` (tanpa `answer`/`alt`).
+- Grading TOEFL/IELTS = tahap berikut (submit endpoint server-side); konten render sudah siap.
 
 ### `[POST]` /api/keuangan/ocr-struk — _Bearer_
 - **res**: `{ error, resetInSeconds }`
