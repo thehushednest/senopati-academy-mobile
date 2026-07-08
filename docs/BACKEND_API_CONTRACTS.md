@@ -431,7 +431,10 @@ Pelengkap `senopati-backend-connect-guide.md` (cara connect + akun test).
 ### Simulasi IELTS (baru)
 - `[GET] /api/mobile/karir/ielts` — `{ full:[...], sample:[...] }`, item `{id,title,description,level, listening:{durationMinutes,sectionCount,questionCount}, reading:{...}, hasWriting }`
 - `[GET] /api/mobile/karir/ielts/[testId]` — `{ id,title,description,level, listening:{durationMinutes,sections:[{number,title,body,questions}]}, reading:{...}, writing?{task1,task2} }`. Question: `{kind:"tf_ng"|"fill_blank"|"multiple_choice",number,prompt,options?}` (tanpa `answer`/`alt`).
-- Grading TOEFL/IELTS = tahap berikut (submit endpoint server-side); konten render sudah siap.
+### Submit-grading TOEFL/IELTS (per-skill, server-side)
+- `[POST] /api/mobile/karir/toefl/[testId]/submit` — req `{ skill:"reading"|"listening"|"structure", answers:{[qNumber]: string|string[]}, routedToHard?:boolean }` (routedToHard hanya iBT_2026). res per format: 2026 → `{skill,format,correct,total,routedToHard,cefr,tier:{label,tier}}`; ITP → `{...,sectionScore}` (31-68); legacy → `{...,sectionScore}` (0-30). `answers` di-key per **nomor soal**; multi-choice value = array of index-string.
+- `[POST] /api/mobile/karir/ielts/[testId]/submit` — req `{ skill:"listening"|"reading", answers:{[qNumber]: string} }` → `{ skill, correct, total, band }` (band 1.0-9.0). tf_ng value="true|false|not_given", mc value=index-string, fill_blank value=teks.
+- Self-practice → **tidak dipersist** (stateless). Writing/Speaking tak auto-grade (AI/manual, pakai `/api/writing/grade`).
 
 ### `[POST]` /api/keuangan/ocr-struk — _Bearer_
 - **res**: `{ error, resetInSeconds }`
