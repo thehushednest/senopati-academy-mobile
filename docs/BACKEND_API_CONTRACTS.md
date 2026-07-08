@@ -138,11 +138,19 @@ Pelengkap `senopati-backend-connect-guide.md` (cara connect + akun test).
 - **req**: `moduleSlug:string, sessionIndex:number, totalSessions:number`
 - **res**: `{ progresses }`
 
+### `[GET]` /api/quiz/questions — _Bearer_  ← BACA SOAL (render kuis)
+- **query**: `moduleSlug:string, quizType:"session"|"final_exam", sessionIndex:number` (sessionIndex wajib bila quizType=session)
+- **res**: `{ quiz, questions }`
+  - `quiz`: `{ id, title, quizType, moduleSlug, sessionIndex, passingGrade, timeLimitSec, maxAttempts, randomizeOrder, showAnswers, total }` (atau `null` bila kuis belum ada)
+  - `questions[]`: `{ id, type, question, options:string[], points, orderIndex }` + `correct:number, explanation:string` **hanya bila** `quiz.showAnswers` (exam yang menyembunyikan kunci tidak mengirim `correct`)
+  - Alur: `GET /api/quiz/questions` (render) → user jawab → `POST /api/quiz/submit` (skor dihitung server dari kunci DB). Pola sama dgn Cerita Jeda: submit/attempts hanya state, ini yang baca kontennya.
+
 ### `[GET]` /api/quiz/attempts — _Bearer_
 
 ### `[POST]` /api/quiz/submit — _Bearer_
-- **req**: `moduleSlug:string, sessionIndex:number, quizType:enum, score:number, maxScore:number, passed:boolean, submissionKey:string`
+- **req**: `moduleSlug:string, sessionIndex:number, quizType:enum, answers:{[questionId]:optionIndex}, score:number, maxScore:number, passed:boolean, submissionKey:string`
 - **res**: `{ submission, deduped }`
+- **catatan**: `score/passed` di body diabaikan; server re-grade dari kunci DB (`gradeModuleQuiz`). `answers` = map `questionId → index opsi terpilih`.
 
 ### `[GET,POST]` /api/review — _Bearer_
 - **req**: `moduleSlug:string, rating:number, experience:string, tags:array, body:string, anonymous:boolean`
