@@ -120,6 +120,8 @@ Pelengkap `senopati-backend-connect-guide.md` (cara connect + akun test).
 ### `[GET]` /api/mobile/modul — _PUBLIC_
 
 ### `[GET]` /api/mobile/modul/[slug] — _PUBLIC_
+- **res**: `{ course:{ id,title,slug,description,category,level,coverImageUrl,durationMinutes,format,objectivesJson,highlightsJson,previewBody,tutor, lessons:[ ... ] } }`
+- **BARU**: tiap `lessons[]` kini punya `material` = `{ kind:"slide"|"student_handout", title, pdfUrl, pdfFilename, totalPages } | null` (slide PDF sesi; `tutor_guide` tidak dikirim). Materi di-map ke lesson via `orderIndex`.
 
 ### `[GET,PUT]` /api/notes — _Bearer_
 - **req**: `moduleSlug:string, sessionIndex:number, body:string, isPublic:boolean`
@@ -172,6 +174,12 @@ Pelengkap `senopati-backend-connect-guide.md` (cara connect + akun test).
 >    Keduanya mengembalikan **state** baru (server resolve beat berikut + apply efek).
 > 4. Ambil `currentBeatCode` baru dari state → `GET /beat/[code]` lagi. Ulangi.
 > 5. Selesai → `POST /finalize` (kunci skor psikometri, dsb).
+
+### `[GET]` /api/cerita — _Bearer_  ⟵ LIST cerita (baru)
+- **res**: `{ stories:[{ slug,title,subtitle,description,authorCredit,coverUrl,startBeatCode,createdAt, progress:{ playthroughId,status:"in_progress"|"completed",currentBeatCode,completedAt,startedAt }|null }] }`
+
+### `[GET]` /api/cerita/[slug] — _Bearer_  ⟵ INTRO/detail cerita (baru)
+- **res**: `{ story:{ slug,title,subtitle,description,authorCredit,coverUrl,startBeatCode,isPublished,createdAt }, progress:{ ...,resumeBeatCode }|null }` · 404 kalau tak ada/unpublished
 
 ### `[GET]` /api/cerita/[slug]/beat/[code] — _Bearer_  ⟵ KONTEN beat (baru)
 - **res**: `{ beat: {`
@@ -353,6 +361,9 @@ Pelengkap `senopati-backend-connect-guide.md` (cara connect + akun test).
 - **req**: `moduleSlug:string`
 - **res**: `{ certificate }`
 
+### `[GET]` /api/certificate — _Bearer_  ⟵ LIST sertifikat milik user (baru)
+- **res**: `{ moduleCertificates:[{ certCode,moduleSlug,moduleTitle,score,issuedAt,revoked,verifyUrl }], programCertificates:[{ certCode,programSlug,programTitle,averageScore,issuedAt,revoked,pdfUrl,verifyUrl }] }`
+
 ### `[GET]` /api/certificate/verify/[code] — _PUBLIC_
 
 ### `[GET,POST]` /api/discussion — _Bearer_
@@ -367,7 +378,33 @@ Pelengkap `senopati-backend-connect-guide.md` (cara connect + akun test).
 - **req**: `body:string`
 
 
+## Skor & Papan Peringkat (baru)
+
+### `[GET]` /api/papan-skor — _Bearer_  ⟵ leaderboard
+- **query**: `scope=national|province|branch` (default national; branch/province fallback ke national kalau user tak punya cabang), `period=YYYY-MM` (default periode terbaru berdata), `limit=1..100` (default 100)
+- **res**: `{ scope,scopeLabel,period,periodLabel,isCurrentPeriod, availablePeriods:[{value,label,isCurrent}], entries:[{rank,studentId,studentName,avatarInitial,avatarUrl,score,tier,tierLabel,isMe}], me:{rank,score,tier,tierLabel,inTopList}|null, total }`
+
+### `[GET]` /api/skor-belajarku — _Bearer_  ⟵ scorecard + tier milik user
+- **query**: `trend=1..12` (default 6)
+- **res** (ada data): `{ hasData:true, period,periodLabel,computedAt, totalScore, tier,tierLabel, components:{ learningAchievement,outcome,engagement,liveParticipation,community }(masing2 {value,max,label}), ranks:{branch,province,national,branchQuartile}, metrics:{quizCount,avgQuiz,completedModules,behavioralEvents,rsvps,tutorTags,discussionPosts,dmMessages}, trend:[{period,periodLabel,totalScore,tier}] }` · **(belum ada)**: `{ hasData:false, message }`
+- tier: `unggulan|aktif|berkembang|memulai|insufficient` (label: Unggulan/Aktif/Berkembang/Sedang Memulai/Belum Cukup Data)
+
 ## Karir & keuangan (student)
+
+### `[GET]` /api/mobile/karir/jurusan — _Bearer_  (baru)
+- **query**: `category` (Saintek|Soshum|Campuran), `q`, `page`, `pageSize` (≤50)
+- **res**: `{ items:[{slug,name,category,summary}], total, page, pageSize, filters:{categories} }`
+- **detail** `[GET] /api/mobile/karir/jurusan/[slug]`: `{ slug,name,category,summary,matchPct(null),riasec:{R,I,A,S,E,C},careerOutlook:[],topSchools:[],scholarships:[{slug,name,provider,level,country,coverage,deadlineAt}] }`
+
+### `[GET]` /api/mobile/karir/beasiswa — _Bearer_  (baru)
+- **query**: `level` (s1|s2|s3, exact), `country` (contains), `q`, `page`, `pageSize`
+- **res**: `{ items:[{slug,name,provider,summary,coverage,level,country,deadlineAt}], total, page, pageSize, filters:{levels,countries} }`
+- **detail** `[GET] /api/mobile/karir/beasiswa/[slug]`: `{ ...,applicationUrl,requirements:[],eligibleMajors:[{slug,name,category}],openToAllMajors, guide:{timeline,essayTips,documents,interviewTips,faqs}|null }`
+
+### `[GET]` /api/mobile/karir/kerja — _Bearer_  (baru)
+- **query**: `category` (domestik|luar_negeri, exact), `country` (contains), `q`, `page`, `pageSize`
+- **res**: `{ items:[{slug,name,category,country,programName,summary,sectors:[],salaryMinIdr,salaryMaxIdr,durationMonths}], total, page, pageSize, filters:{categories} }`
+- **detail** `[GET] /api/mobile/karir/kerja/[slug]`: `{ ...,requirements:[],officialUrl,targetAudience,isOverseas, guide:{timeline,documents,costs,examPrep,safetyTips,rights,faqs,verifiedChannels}|null }`
 
 ### `[POST]` /api/keuangan/ocr-struk — _Bearer_
 - **res**: `{ error, resetInSeconds }`
